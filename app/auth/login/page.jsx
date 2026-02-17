@@ -9,51 +9,62 @@ import axios from "axios";
 export default function Page() {
     const [stuId, setStuId] = useState("");
     const [password, setPassword] = useState("");
+    const [email, setEmail] = useState("");
     const [error, setError] = useState("");
     const [qrLogin, setQrLogin] = useState(false);
-    const [email, setEmail] = useState("");
 
     const router = useRouter();
     const scannerRef = useRef(null);
     const isMountedRef = useRef(true);
 
+    // Static test data for QR login
+    const mockStuId = "STU12345";
+    const mockEmail = "test@student.com";
+    const mockPassword = "password123";
+
     // Normal Login
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError("");
+
         const storedPassword = localStorage.getItem("password");
         const storedEmail = localStorage.getItem("email");
         const storedStuId = localStorage.getItem("stuId");
-        if (storedPassword === password && storedStuId === stuId.toUpperCase() && storedEmail === email) {
-            let res = await axios.post("https://stu-portal-backend.vercel.app/api/auth/login"
-                , {
+
+        if (
+            storedPassword === password &&
+            storedStuId === stuId.toUpperCase() &&
+            storedEmail === email
+        ) {
+            try {
+                const res = await axios.post("https://stu-portal-backend.vercel.app/api/auth/login", {
+                    stuId,
                     email,
                     password,
-                    stuId
                 });
 
-            if (res.status === 200) {
-                router.push("/dashboard/home");
+                if (res.status === 200) {
+                    router.push("/dashboard/home");
+                }
+            } catch (err) {
+                console.log("Backend error:", err);
+                setError("Login failed");
             }
         } else {
             setError("Invalid Student ID or Password");
         }
     };
 
-    // SIMPLE SCANNER STOP FUNCTION
+    // Stop QR Scanner
     const stopScanner = async () => {
         if (scannerRef.current) {
             try {
-                // Hide the video element immediately
                 const qrReaderElement = document.getElementById("qr-reader");
-                if (qrReaderElement) {
-                    qrReaderElement.style.display = "none";
-                }
+                if (qrReaderElement) qrReaderElement.style.display = "none";
 
                 await scannerRef.current.stop();
                 await scannerRef.current.clear();
                 scannerRef.current = null;
-                console.log("Scanner stopped successfully");
             } catch (err) {
                 console.log("Error stopping scanner:", err);
                 scannerRef.current = null;
@@ -61,87 +72,80 @@ export default function Page() {
         }
     };
 
-    // Start scanner
-    const startScanner = async () => {
-        if (!qrLogin) return;
+  const startScanner = async () => {
+    if (!qrLogin) return;
 
-        try {
-            // Make sure scanner is stopped before starting
-            await stopScanner();
+    await stopScanner(); // ensure no old scanner is running
 
-            // Make the qr-reader visible again
-            const qrReaderElement = document.getElementById("qr-reader");
-            if (qrReaderElement) {
-                qrReaderElement.style.display = "block";
-            }
+    const qrReaderElement = document.getElementById("qr-reader");
+    if (qrReaderElement) qrReaderElement.style.display = "block";
 
-            // Create new scanner
-            const qrCodeScanner = new Html5Qrcode("qr-reader");
-            scannerRef.current = qrCodeScanner;
+    const qrCodeScanner = new Html5Qrcode("qr-reader");
+    scannerRef.current = qrCodeScanner;
 
-            const qrConfig = {
-                fps: 10,
-                qrbox: { width: 250, height: 250 },
-                aspectRatio: 1.0
-            };
+    const qrConfig = { fps: 10, qrbox: { width: 250, height: 250 }, aspectRatio: 1.0 };
 
-            await qrCodeScanner.start(
-                { facingMode: "environment" },
-                qrConfig,
-                async (decodedText) => {
-                    console.log("Scanned:", decodedText);
-                    if (isMountedRef.current) {
-                        if (decodedText === mockStuId) {
-                            await stopScanner();
-                            router.push("/dashboard/home");
-                        } else {
-                            setError("Invalid QR Code");
-                        }
-                    }
-                },
-                (errorMessage) => {
-                    // Ignore scan errors
+    await qrCodeScanner.start(
+        { facingMode: "environment" },
+        qrConfig,
+        async (decodedText) => {
+            console.log("Scanned:", decodedText);
+            if (!isMountedRef.current) return;
+
+            // Get stored credentials from localStorage
+            const storedEmail = localStorage.getItem("email");
+            const storedStuId = localStorage.getItem("stuId");
+            const storedPassword = localStorage.getItem("password");
+
+            if (decodedText.toUpperCase() === storedStuId) {
+                await stopScanner();
+
+                try {
+                    const res = await axios.post("https://stu-portal-backend.vercel.app/api/auth/login", {
+                        stuId: storedStuId,
+                        email: storedEmail,
+                        password: storedPassword,
+                    });
+
+                    if (res.status === 200) router.push("/dashboard/home");
+                    else setError("Backend login failed");
+                } catch (err) {
+                    console.log("Backend error:", err);
+                    setError("Backend login failed");
                 }
-            );
-        } catch (err) {
-            console.log("Camera error:", err);
-            setError("Camera failed to start");
-            scannerRef.current = null;
+            } else {
+                setError("Invalid QR Code");
+            }
+        },
+        (errorMessage) => {
+            // ignore scan errors
         }
-    };
+    );
+};
 
-    // Handle QR login toggle
+
+    // Toggle QR login
     const toggleQrLogin = async () => {
         if (qrLogin) {
-            // Switching from QR to normal login
             await stopScanner();
             setQrLogin(false);
         } else {
-            // Switching from normal to QR login
-            setQrLogin(true);
             setError("");
+            setQrLogin(true);
         }
     };
 
-    // Main effect
+    // Effect for QR login
     useEffect(() => {
         isMountedRef.current = true;
 
         if (qrLogin) {
-            // Small delay to ensure DOM is ready
             const timer = setTimeout(() => {
-                if (isMountedRef.current) {
-                    startScanner();
-                }
+                if (isMountedRef.current) startScanner();
             }, 200);
 
-            return () => {
-                clearTimeout(timer);
-            };
-        } else {
-            // Immediately stop scanner when qrLogin becomes false
-            stopScanner();
-        }
+            return () => clearTimeout(timer);
+        } else stopScanner();
 
         return () => {
             isMountedRef.current = false;
@@ -164,7 +168,6 @@ export default function Page() {
                     Student Login
                 </h2>
 
-                {/* Normal Login Form */}
                 {!qrLogin && (
                     <>
                         <form onSubmit={handleSubmit} className="space-y-4">
@@ -184,7 +187,6 @@ export default function Page() {
                                 className="w-full border border-gray-300 rounded-full px-4 py-2 outline-none focus:ring-2 focus:ring-indigo-400"
                                 required
                             />
-
                             <input
                                 type="password"
                                 placeholder="Enter your password"
@@ -193,11 +195,7 @@ export default function Page() {
                                 className="w-full border border-gray-300 rounded-full px-4 py-2 outline-none focus:ring-2 focus:ring-indigo-400"
                                 required
                             />
-
-                            {error && (
-                                <p className="text-red-500 text-sm text-center">{error}</p>
-                            )}
-
+                            {error && <p className="text-red-500 text-sm text-center">{error}</p>}
                             <button
                                 type="submit"
                                 className="w-full bg-indigo-500 hover:bg-indigo-600 text-white py-2 rounded-full transition duration-300"
@@ -211,25 +209,16 @@ export default function Page() {
                             type="button"
                             className="w-full flex items-center gap-2 justify-center mt-4 bg-white border border-gray-300 py-2 rounded-full text-gray-800 hover:bg-gray-50 transition"
                         >
-                            <img
-                                className="h-4 w-4"
-                                src="/qr-code.png"
-                                alt="qrCodeIcon"
-                            />
+                            <img className="h-4 w-4" src="/qr-code.png" alt="qrCodeIcon" />
                             Log in with QR Code
                         </button>
                     </>
                 )}
 
-                {/* QR Scanner View */}
                 {qrLogin && (
                     <div className="mt-4">
                         <div id="qr-reader" className="w-full"></div>
-
-                        {error && (
-                            <p className="text-red-500 text-sm text-center mt-2">{error}</p>
-                        )}
-
+                        {error && <p className="text-red-500 text-sm text-center mt-2">{error}</p>}
                         <button
                             onClick={toggleQrLogin}
                             className="mt-4 w-full bg-red-500 text-white py-2 rounded-full hover:bg-red-600 transition"
@@ -241,10 +230,7 @@ export default function Page() {
 
                 <p className="text-center mt-5 text-sm">
                     Don't have an account?{" "}
-                    <Link
-                        href="/auth/register"
-                        className="text-indigo-500 hover:underline"
-                    >
+                    <Link href="/auth/register" className="text-indigo-500 hover:underline">
                         Create Account
                     </Link>
                 </p>

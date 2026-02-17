@@ -3,11 +3,11 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { 
-  User, 
-  Mail, 
-  Phone, 
-  MapPin, 
+import {
+  User,
+  Mail,
+  Phone,
+  MapPin,
   Calendar,
   BookOpen,
   Award,
@@ -93,11 +93,10 @@ export default function ProfilePage() {
   const TabButton = ({ id, label, icon: Icon }) => (
     <button
       onClick={() => setActiveTab(id)}
-      className={`flex items-center px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${
-        activeTab === id
+      className={`flex items-center px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${activeTab === id
           ? 'bg-indigo-50 text-indigo-700 shadow-sm'
           : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
-      }`}
+        }`}
     >
       <Icon className="h-4 w-4 mr-2" />
       {label}
@@ -382,7 +381,7 @@ export default function ProfilePage() {
         {activeTab === 'courses' && (
           <div className="space-y-6">
             <h3 className="text-lg font-semibold text-gray-900">Course History & Grades</h3>
-            
+
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
@@ -401,18 +400,16 @@ export default function ProfilePage() {
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{course.name}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{course.credits}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        <span className={`px-2 py-1 rounded-full text-xs ${
-                          course.grade === 'A' || course.grade === 'A-' ? 'bg-green-100 text-green-700' :
-                          course.grade === 'B+' ? 'bg-blue-100 text-blue-700' :
-                          'bg-gray-100 text-gray-700'
-                        }`}>
+                        <span className={`px-2 py-1 rounded-full text-xs ${course.grade === 'A' || course.grade === 'A-' ? 'bg-green-100 text-green-700' :
+                            course.grade === 'B+' ? 'bg-blue-100 text-blue-700' :
+                              'bg-gray-100 text-gray-700'
+                          }`}>
                           {course.grade}
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm">
-                        <span className={`px-2 py-1 rounded-full text-xs ${
-                          course.status === 'completed' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'
-                        }`}>
+                        <span className={`px-2 py-1 rounded-full text-xs ${course.status === 'completed' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'
+                          }`}>
                           {course.status}
                         </span>
                       </td>
@@ -446,16 +443,15 @@ export default function ProfilePage() {
         {activeTab === 'activity' && (
           <div className="space-y-6">
             <h3 className="text-lg font-semibold text-gray-900">Recent Activity</h3>
-            
+
             <div className="space-y-4">
               {recentActivity.map((activity) => (
                 <div key={activity.id} className="flex items-start space-x-3 p-3 hover:bg-gray-50 rounded-lg transition-colors">
-                  <div className={`p-2 rounded-lg ${
-                    activity.type === 'query' ? 'bg-blue-100' :
-                    activity.type === 'message' ? 'bg-green-100' :
-                    activity.type === 'resolved' ? 'bg-purple-100' :
-                    'bg-gray-100'
-                  }`}>
+                  <div className={`p-2 rounded-lg ${activity.type === 'query' ? 'bg-blue-100' :
+                      activity.type === 'message' ? 'bg-green-100' :
+                        activity.type === 'resolved' ? 'bg-purple-100' :
+                          'bg-gray-100'
+                    }`}>
                     {activity.type === 'query' && <BookOpen className="h-4 w-4 text-blue-600" />}
                     {activity.type === 'message' && <Mail className="h-4 w-4 text-green-600" />}
                     {activity.type === 'resolved' && <CheckCircle className="h-4 w-4 text-purple-600" />}
@@ -480,7 +476,7 @@ export default function ProfilePage() {
         {activeTab === 'settings' && (
           <div className="space-y-6">
             <h3 className="text-lg font-semibold text-gray-900">Account Settings</h3>
-            
+
             <div className="space-y-4">
               {/* Notification Settings */}
               <div className="border border-gray-200 rounded-lg p-4">
