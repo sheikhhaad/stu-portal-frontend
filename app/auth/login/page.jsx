@@ -25,13 +25,12 @@ export default function Page() {
         const storedEmail = localStorage.getItem("email");
         const storedStuId = localStorage.getItem("stuId");
         if (storedPassword === password && storedStuId === stuId.toUpperCase() && storedEmail === email) {
-            let res = await axios.post("http://localhost:8000/api/auth/login"
+            let res = await axios.post("https://stu-portal-backend.vercel.app/api/auth/login"
                 , {
                     email,
                     password,
                     stuId
                 });
-            console.log(res);
 
             if (res.status === 200) {
                 router.push("/dashboard/home");
