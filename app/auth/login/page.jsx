@@ -17,16 +17,16 @@ export default function Page() {
     const mockStuId = "CAF-123456";
     const scannerRef = useRef(null);
     const isMountedRef = useRef(true);
+    console.log(process.env.NEXT_PUBLIC_API_URL)
 
     // Normal Login
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError("");
-
         const storedPassword = localStorage.getItem("password");
         const storedEmail = localStorage.getItem("email");
         if (storedPassword === password && mockStuId === stuId.toUpperCase() && storedEmail === email) {
-            let res = await axios.post("http://localhost:8000/api/auth/login", {
+            let res = await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/login`, {
                 email,
                 password,
                 stuId

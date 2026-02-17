@@ -13,7 +13,6 @@ export default function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const { notifications } = useStudent();
   const router = useRouter();
-  console.log(notifications);
 
 
   const navLinks = [
