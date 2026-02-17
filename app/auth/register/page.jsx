@@ -12,7 +12,8 @@ export default function Page() {
     const [confirmPassword, setConfirmPassword] = useState("");
     const [error, setError] = useState("");
     const [success, setSuccess] = useState("");
-
+    const [cnic, setCnic] = useState("");
+    const [stuId, setStuId] = useState("");
 
 
     const handleSubmit = (e) => {
@@ -25,12 +26,14 @@ export default function Page() {
             setError("Passwords do not match.");
             return;
         }
-        if (email === "" || password === "") {
+        if (email === "" || password === "" || cnic === "" || stuId === "") {
             alert("Please fill all the fields");
             return;
         }
         localStorage.setItem("email", email);
         localStorage.setItem("password", password);
+        localStorage.setItem("cnic", cnic);
+        localStorage.setItem("stuId", stuId.toUpperCase());
         router.push("/auth/login");
 
     };
@@ -52,6 +55,22 @@ export default function Page() {
                         required
                     />
 
+                    <input
+                        type="text"
+                        placeholder="Enter your CNIC"
+                        className="w-full border border-gray-300 rounded-full px-4 py-2 outline-none focus:ring-2 focus:ring-indigo-400"
+                        value={cnic}
+                        onChange={(e) => setCnic(e.target.value)}
+                        required
+                    />
+                    <input
+                        type="text"
+                        placeholder="Enter your Student ID"
+                        className="w-full border border-gray-300 rounded-full px-4 py-2 outline-none focus:ring-2 focus:ring-indigo-400"
+                        value={stuId}
+                        onChange={(e) => setStuId(e.target.value)}
+                        required
+                    />
                     <input
                         type="password"
                         placeholder="Enter your password"

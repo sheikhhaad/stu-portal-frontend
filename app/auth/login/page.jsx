@@ -14,10 +14,8 @@ export default function Page() {
     const [email, setEmail] = useState("");
 
     const router = useRouter();
-    const mockStuId = "CAF-123456";
     const scannerRef = useRef(null);
     const isMountedRef = useRef(true);
-    console.log(process.env.NEXT_PUBLIC_API_URL)
 
     // Normal Login
     const handleSubmit = async (e) => {
@@ -25,8 +23,9 @@ export default function Page() {
         setError("");
         const storedPassword = localStorage.getItem("password");
         const storedEmail = localStorage.getItem("email");
-        if (storedPassword === password && mockStuId === stuId.toUpperCase() && storedEmail === email) {
-            let res = await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/login`, {
+        const storedStuId = localStorage.getItem("stuId");
+        if (storedPassword === password && storedStuId === stuId.toUpperCase() && storedEmail === email) {
+            let res = await axios.post("https://stu-portal-backend.vercel.app/api/auth/login", {
                 email,
                 password,
                 stuId
