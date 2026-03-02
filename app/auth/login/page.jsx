@@ -21,7 +21,7 @@ export default function Page() {
 
     try {
       const res = await axios.post(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/auth/login`,
+        `https://stu-portal-backend.vercel.app/api/auth/login`,
         {
           rollNumber: stuId.toUpperCase(),
           password,
