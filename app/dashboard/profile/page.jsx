@@ -36,16 +36,16 @@ export default function ProfilePage() {
   const [activeTab, setActiveTab] = useState("profile");
   const router = useRouter();
   const [formData, setFormData] = useState({
-    name: student.name,
-    email: student.email,
-    phone: student.phone,
-    address: student.address,
-    bio: student.bio,
-    department: student.department,
-    year: student.year,
-    studentId: student.rollNumber,
-    dateOfBirth: student.dateOfBirth,
-    emergencyContact: student.emergencyContact,
+    name: student?.name,
+    email: student?.email,
+    phone: student?.phone,
+    address: student?.address,
+    bio: student?.bio,
+    department: student?.department,
+    year: student?.year,
+    studentId: student?.rollNumber,
+    dateOfBirth: student?.dateOfBirth,
+    emergencyContact: student?.emergencyContact,
   });
 
   const [isEditingProfile, setIsEditingProfile] = useState(false);
