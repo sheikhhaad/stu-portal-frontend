@@ -1,248 +1,382 @@
-"use client"
-import React, { useState, useEffect } from 'react';
-import Link from 'next/link';
-import { useParams, useRouter } from 'next/navigation';
-import { useStudent } from '@/app/context/StudentContext';
+"use client";
+import React, { useState, useEffect, useRef } from "react";
+import { useParams, useRouter } from "next/navigation";
+import { useQueries } from "@/app/context/QueryContext";
 import {
-    Send,
-    Paperclip,
-    Download,
-    ChevronLeft,
-    Clock,
-    User,
-    Calendar,
-    AlertCircle,
-    CheckCircle,
-    FileText,
-    Image
-} from 'lucide-react';
+  Send,
+  Paperclip,
+  ChevronLeft,
+  Calendar,
+  FileText,
+  User,
+  GraduationCap,
+  MessageSquare,
+} from "lucide-react";
+import { useStudent } from "@/app/context/StudentContext";
+import axios from "axios";
 
 const QueryDetail = () => {
-    const { id } = useParams();
-    const { queries } = useStudent();
-    const router = useRouter();
+  const { id } = useParams();
+  const router = useRouter();
+  const { queries, loading } = useQueries();
+  const { student } = useStudent();
 
-    // Find query from context
-    const query = queries.find(q => q.id === parseInt(id));
+  const [message, setMessage] = useState("");
+  const [messages, setMessages] = useState([]);
+  const [sending, setSending] = useState(false);
+  const [fetchingMessages, setFetchingMessages] = useState(false);
 
-    const [message, setMessage] = useState('');
-    const [messages, setMessages] = useState([
-        {
-            id: 1,
-            sender: 'System',
-            content: 'Query received. An instructor will review it shortly.',
-            timestamp: new Date().toLocaleString(),
-            isTeacher: true,
-            avatar: 'SYS'
-        }
-    ]);
+  const messagesEndRef = useRef(null);
 
-    // If query not found (e.g. invalid ID), handle gracefully
-    useEffect(() => {
-        if (!query && queries.length > 0) {
-            // Only redirect if queries are loaded but id is not found
-            // For now, we just let it render a "Not Found" state
-        }
-    }, [query, queries]);
+  // Find query from context
+  const query = queries?.find((q) => q._id === id);
 
-    if (!query) {
-        return (
-            <div className="max-w-4xl mx-auto py-12 text-center">
-                <h2 className="text-xl font-bold text-gray-800">Query not found</h2>
-                <Link href="/dashboard/my-query" className="text-indigo-600 hover:underline mt-4 block">
-                    Back to Queries
-                </Link>
-            </div>
-        )
+  // Scroll to bottom of messages
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
+  // Fetch messages for this query
+  const fetchMessages = async () => {
+    if (!query?._id) return;
+
+    setFetchingMessages(true);
+    try {
+      const res = await axios.get(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/messages/${query._id}`,
+      );
+
+      if (res.data && res.data.length > 0) {
+        // Transform messages to match your format
+        const formattedMessages = res.data.map((msg) => ({
+          id: msg._id,
+          sender:
+            msg.sender_role === "student"
+              ? student?.name || "You"
+              : "Instructor",
+          senderRole: msg.sender_role,
+          content: msg.message,
+          timestamp: new Date(msg.createdAt).toLocaleString(),
+          avatar:
+            msg.sender_role === "student"
+              ? student?.name
+                ? student.name.charAt(0).toUpperCase()
+                : "S"
+              : "I",
+        }));
+
+        setMessages(formattedMessages);
+      }
+    } catch (error) {
+      console.error("Error fetching messages:", error);
+    } finally {
+      setFetchingMessages(false);
     }
+  };
 
-    const handleSendMessage = (e) => {
-        e.preventDefault();
-        if (message.trim()) {
-            const newMessage = {
-                id: messages.length + 1,
-                sender: 'You',
-                content: message,
-                timestamp: new Date().toLocaleString(),
-                isTeacher: false,
-                avatar: 'JS'
-            };
-            setMessages([...messages, newMessage]);
-            setMessage('');
-        }
-    };
+  // Fetch messages when component mounts
+  useEffect(() => {
+    if (query?._id) {
+      fetchMessages();
+    }
+  }, [query?._id]);
 
-    const attachments = [
-        // Static attachments for demo
-        { name: 'document.pdf', size: '2.3 MB', type: 'pdf', icon: FileText },
-    ];
+  const handleSendMessage = async (e) => {
+    e.preventDefault();
 
+    if (!message.trim() || !student?._id || !id) return;
+
+    setSending(true);
+    try {
+      const res = await axios.post(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/messages/send`,
+        {
+          query_id: id,
+          sender_id: student._id,
+          sender_role: "student",
+          message: message.trim(),
+        },
+      );
+
+      // Add the new message to the list
+      const newMessage = {
+        id: res.data._id || Date.now(),
+        sender: student?.name || "You",
+        senderRole: "student",
+        content: message.trim(),
+        timestamp: new Date().toLocaleString(),
+        avatar: student?.name ? student.name.charAt(0).toUpperCase() : "S",
+      };
+
+      setMessages((prev) => [...prev, newMessage]);
+      setMessage("");
+    } catch (error) {
+      console.error("Error sending message:", error);
+      alert("Failed to send message. Please try again.");
+    } finally {
+      setSending(false);
+    }
+  };
+
+  // Handle Enter key press
+  const handleKeyDown = (e) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      if (message.trim() && !sending) {
+        handleSendMessage(e);
+      }
+    }
+  };
+
+  if (loading && queries.length === 0) {
     return (
-        <div className="max-w-4xl mx-auto px-4 py-8 animate-fade-in">
-            {/* Back Navigation */}
-            <Link href="/dashboard/my-query" className="inline-flex items-center text-gray-600 hover:text-indigo-600 mb-6 transition-colors">
-                <ChevronLeft className="h-5 w-5 mr-1" />
-                Back to Queries
-            </Link>
-
-            {/* Query Info Card */}
-            <div className="card p-6 mb-6">
-                <div className="flex flex-col md:flex-row md:items-start md:justify-between mb-4">
-                    <div>
-                        <div className="flex items-center gap-3 mb-2">
-                            <h2 className="text-xl font-bold text-gray-800">{query.subject}</h2>
-                            <span className={`px-3 py-1 rounded-full text-xs font-medium border ${query.status === 'Pending' ? 'bg-yellow-100 text-yellow-800 border-yellow-200' :
-                                    query.status === 'In Progress' ? 'bg-blue-100 text-blue-800 border-blue-200' :
-                                        'bg-green-100 text-green-800 border-green-200'
-                                }`}>
-                                {query.status}
-                            </span>
-                        </div>
-                        <div className="flex items-center gap-4 text-sm text-gray-500">
-                            <span className="flex items-center">
-                                <FileText className="h-4 w-4 mr-1" />
-                                Query #{query.id}
-                            </span>
-                            <span className="flex items-center">
-                                <Calendar className="h-4 w-4 mr-1" />
-                                Created on {query.date}
-                            </span>
-                        </div>
-                    </div>
-               
-                </div>
-
-                <div className="bg-gray-50 rounded-lg p-4 mb-4 border border-gray-100">
-                    <p className="text-gray-700 whitespace-pre-wrap">
-                        {query.description}
-                    </p>
-                </div>
-
-                {/* Attachments Section */}
-                <div className="mb-4">
-                    <h4 className="text-sm font-medium text-gray-700 mb-2 flex items-center">
-                        <Paperclip className="h-4 w-4 mr-1" />
-                        Attachments ({attachments.length})
-                    </h4>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                        {attachments.map((file, index) => {
-                            const Icon = file.icon;
-                            return (
-                                <div key={index} className="flex items-center p-2 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors">
-                                    <Icon className="h-8 w-8 text-gray-400 mr-2" />
-                                    <div className="flex-1 min-w-0">
-                                        <p className="text-sm font-medium text-gray-700 truncate">{file.name}</p>
-                                        <p className="text-xs text-gray-500">{file.size}</p>
-                                    </div>
-                                    <Download className="h-4 w-4 text-gray-400 hover:text-indigo-600" />
-                                </div>
-                            );
-                        })}
-                    </div>
-                </div>
-
-                {/* Query Metadata */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4 border-t border-gray-100">
-                    <div>
-                        <p className="text-xs text-gray-500 flex items-center mb-1">
-                            <User className="h-3 w-3 mr-1" />
-                            Assigned Teacher
-                        </p>
-                        <p className="text-sm font-medium text-gray-800">{query.teacher || 'Unassigned'}</p>
-                    </div>
-                    <div>
-                        <p className="text-xs text-gray-500 mb-1">Department</p>
-                        <p className="text-sm font-medium text-gray-800">General</p>
-                    </div>
-                    <div>
-                        <p className="text-xs text-gray-500 flex items-center mb-1">
-                            <AlertCircle className="h-3 w-3 mr-1" />
-                            Priority
-                        </p>
-                        <span className="text-xs px-2 py-0.5 bg-gray-100 text-gray-700 rounded-full inline-block">
-                            Normal
-                        </span>
-                    </div>
-                    <div>
-                        <p className="text-xs text-gray-500 flex items-center mb-1">
-                            <Clock className="h-3 w-3 mr-1" />
-                            Last Updated
-                        </p>
-                        <p className="text-sm font-medium text-gray-800">Just now</p>
-                    </div>
-                </div>
-            </div>
-
-            {/* Chat Section */}
-            <div className="card">
-                <div className="p-6 border-b border-gray-100">
-                    <h3 className="text-lg font-bold text-gray-800">Discussion</h3>
-                </div>
-
-                {/* Messages */}
-                <div className="p-6 space-y-4 max-h-96 overflow-y-auto">
-                    {messages.map((msg) => (
-                        <div key={msg.id} className={`flex ${msg.isTeacher ? 'justify-start' : 'justify-end'}`}>
-                            <div className={`flex max-w-[80%] md:max-w-[70%] ${msg.isTeacher ? 'flex-row' : 'flex-row-reverse'}`}>
-                                {/* Avatar */}
-                                <div className={`flex-shrink-0 ${msg.isTeacher ? 'mr-3' : 'ml-3'}`}>
-                                    <div className={`h-8 w-8 rounded-full flex items-center justify-center text-xs font-medium ${msg.isTeacher ? 'bg-gray-200 text-gray-700' : 'bg-indigo-100 text-indigo-700'
-                                        }`}>
-                                        {msg.avatar}
-                                    </div>
-                                </div>
-
-                                {/* Message Content */}
-                                <div>
-                                    <div className={`rounded-2xl p-4 shadow-sm ${msg.isTeacher
-                                            ? 'bg-gray-100 text-gray-800 rounded-tl-none'
-                                            : 'bg-indigo-600 text-white rounded-tr-none'
-                                        }`}>
-                                        <p className="text-sm">{msg.content}</p>
-                                    </div>
-                                    <div className={`flex items-center mt-1 text-xs text-gray-500 ${msg.isTeacher ? 'justify-start' : 'justify-end'
-                                        }`}>
-                                        <span>{msg.sender}</span>
-                                        <span className="mx-1">•</span>
-                                        <span>{msg.timestamp}</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    ))}
-                </div>
-
-                {/* Message Input */}
-                <div className="p-6 border-t border-gray-100">
-                    <form onSubmit={handleSendMessage}>
-                        <div className="flex items-end gap-2">
-                            <div className="flex-1 relative">
-                                <textarea
-                                    value={message}
-                                    onChange={(e) => setMessage(e.target.value)}
-                                    placeholder="Type your message..."
-                                    rows="1"
-                                    className="input-field pr-10 py-3 resize-none"
-                                    style={{ minHeight: '46px' }}
-                                />
-                                <button type="button" className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-indigo-600">
-                                    <Paperclip className="h-5 w-5" />
-                                </button>
-                            </div>
-                            <button
-                                type="submit"
-                                disabled={!message.trim()}
-                                className={`p-3 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 transition-colors shadow-md ${!message.trim() ? 'opacity-50 cursor-not-allowed' : ''}`}
-                            >
-                                <Send className="h-5 w-5" />
-                            </button>
-                        </div>
-                        <p className="text-xs text-gray-400 mt-2 text-center">Press Enter to send</p>
-                    </form>
-                </div>
-            </div>
-        </div>
+      <div className="flex flex-col items-center justify-center min-h-[60vh]">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+        <p className="mt-4 text-gray-500 font-medium">
+          Loading query details...
+        </p>
+      </div>
     );
+  }
+
+  if (!query) {
+    return (
+      <div className="max-w-4xl mx-auto py-12 text-center">
+        <h2 className="text-xl font-bold text-gray-800">Query not found</h2>
+        <p className="text-gray-500 mt-2">
+          The query you are looking for does not exist or has been removed.
+        </p>
+        <button
+          onClick={() => router.back()}
+          className="text-indigo-600 hover:underline mt-6 inline-flex items-center font-medium"
+        >
+          <ChevronLeft className="h-4 w-4 mr-1" />
+          Back to All Queries
+        </button>
+      </div>
+    );
+  }
+
+  const getStatusColor = (status) => {
+    switch (status?.toLowerCase()) {
+      case "pending":
+        return "bg-yellow-100 text-yellow-800 border-yellow-200";
+      case "in progress":
+        return "bg-blue-100 text-blue-800 border-blue-200";
+      case "resolved":
+        return "bg-green-100 text-green-800 border-green-200";
+      default:
+        return "bg-gray-100 text-gray-800 border-gray-200";
+    }
+  };
+
+  return (
+    <div className="max-w-4xl mx-auto px-4 py-8 animate-fade-in">
+      {/* Back Navigation */}
+      <button
+        onClick={() => router.back()}
+        className="inline-flex items-center text-gray-600 hover:text-indigo-600 mb-6 transition-colors"
+      >
+        <ChevronLeft className="h-5 w-5 mr-1" />
+        Back to Queries
+      </button>
+
+      {/* Query Info Card */}
+      <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-6 mb-6">
+        <div className="flex flex-col md:flex-row md:items-start md:justify-between mb-4">
+          <div>
+            <div className="flex items-center gap-3 mb-2">
+              <h2 className="text-xl font-bold text-gray-800">
+                {query.course}
+              </h2>
+              <span
+                className={`px-3 py-1 rounded-full text-xs font-medium border capitalize ${getStatusColor(query.status)}`}
+              >
+                {query.status}
+              </span>
+            </div>
+            <div className="flex items-center gap-4 text-sm text-gray-500">
+              <span className="flex items-center">
+                <FileText className="h-4 w-4 mr-1" />
+                Query ID: {query._id.slice(-8)}
+              </span>
+              <span className="flex items-center">
+                <Calendar className="h-4 w-4 mr-1" />
+                {new Date(query.createdAt).toLocaleDateString()}
+              </span>
+            </div>
+          </div>
+          <div className="mt-4 md:mt-0 flex items-center gap-2 bg-indigo-50 px-4 py-2 rounded-lg">
+            <GraduationCap className="h-5 w-5 text-indigo-600" />
+            <span className="text-sm font-medium text-indigo-700">
+              Instructor: {query.instructor}
+            </span>
+          </div>
+        </div>
+
+        <div className="bg-gray-50 rounded-lg p-4 border border-gray-100">
+          <p className="text-gray-700 whitespace-pre-wrap">
+            {typeof query.query === "string" ? query.query : "No query text"}
+          </p>
+        </div>
+      </div>
+
+      {/* Chat Section */}
+      <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
+        <div className="p-6 border-b border-gray-100 bg-gradient-to-r from-indigo-50 to-white">
+          <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+            Discussion
+          </h3>
+        </div>
+
+        {/* Messages Container */}
+        <div className="p-6 space-y-6 max-h-[500px] overflow-y-auto bg-gray-50/50">
+          {fetchingMessages ? (
+            <div className="flex justify-center py-12">
+              <div className="animate-spin rounded-full h-8 w-8 border-3 border-indigo-200 border-t-indigo-600"></div>
+            </div>
+          ) : messages.length > 0 ? (
+            <>
+              {messages.map((msg, index) => {
+                const isStudent = msg.senderRole === "student";
+                const showAvatar =
+                  index === 0 ||
+                  messages[index - 1]?.senderRole !== msg.senderRole;
+
+                return (
+                  <div
+                    key={msg.id}
+                    className={`flex ${isStudent ? "justify-end" : "justify-start"}`}
+                  >
+                    <div
+                      className={`flex max-w-[80%] md:max-w-[70%] ${isStudent ? "flex-row-reverse" : "flex-row"}`}
+                    >
+                      {/* Avatar - Only show for first message in a sequence from same sender */}
+                      {showAvatar ? (
+                        <div
+                          className={`flex-shrink-0 ${isStudent ? "ml-3" : "mr-3"}`}
+                        >
+                          <div
+                            className={`h-10 w-10 rounded-full flex items-center justify-center text-sm font-semibold shadow-md ${
+                              isStudent
+                                ? "bg-indigo-600 text-white"
+                                : "bg-gray-700 text-white"
+                            }`}
+                          >
+                            {msg.avatar}
+                          </div>
+                        </div>
+                      ) : (
+                        <div
+                          className={`flex-shrink-0 ${isStudent ? "ml-3" : "mr-3"} w-10`}
+                        />
+                      )}
+
+                      {/* Message Content */}
+                      <div>
+                        {/* Sender Name - Only show for first message in a sequence */}
+                        {showAvatar && (
+                          <div
+                            className={`text-xs font-medium mb-1 ${isStudent ? "text-right" : "text-left"}`}
+                          >
+                            <span
+                              className={
+                                isStudent ? "text-indigo-600" : "text-gray-700"
+                              }
+                            >
+                              {msg.sender}
+                            </span>
+                            <span className="text-gray-400 mx-2">•</span>
+                            <span className="text-gray-400">
+                              {msg.timestamp}
+                            </span>
+                          </div>
+                        )}
+
+                        {/* Message Bubble */}
+                        <div
+                          className={`rounded-2xl p-4 shadow-sm ${
+                            isStudent
+                              ? "bg-indigo-600 text-white rounded-tr-none"
+                              : "bg-white text-gray-800 rounded-tl-none border border-gray-200"
+                          }`}
+                        >
+                          <p className="text-sm leading-relaxed whitespace-pre-wrap">
+                            {msg.content}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+              <div ref={messagesEndRef} />
+            </>
+          ) : (
+            <div className="text-center py-12">
+              <div className="w-16 h-16 bg-indigo-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                <MessageSquare className="h-8 w-8 text-indigo-400" />
+              </div>
+              <p className="text-gray-500 font-medium">No messages yet</p>
+              <p className="text-gray-400 text-sm mt-1">
+                Be the first to start the conversation
+              </p>
+            </div>
+          )}
+        </div>
+
+        {/* Message Input */}
+        <div className="p-6 border-t border-gray-100 bg-white">
+          <form onSubmit={handleSendMessage}>
+            <div className="flex items-end gap-3">
+              <div className="flex-1 relative">
+                <textarea
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  placeholder="Type your message..."
+                  rows="1"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none pr-12 transition-all"
+                  style={{ minHeight: "52px", maxHeight: "120px" }}
+                />
+                <button
+                  type="button"
+                  className="absolute right-3 bottom-3 text-gray-400 hover:text-indigo-600 transition-colors"
+                  title="Attach file"
+                >
+                  <Paperclip className="h-5 w-5" />
+                </button>
+              </div>
+              <button
+                type="submit"
+                disabled={!message.trim() || sending}
+                className={`p-3 rounded-xl bg-indigo-600 text-white hover:bg-indigo-700 transition-all shadow-md ${
+                  !message.trim() || sending
+                    ? "opacity-50 cursor-not-allowed"
+                    : "hover:shadow-lg transform hover:-translate-y-0.5"
+                }`}
+                title="Send message"
+              >
+                {sending ? (
+                  <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>
+                ) : (
+                  <Send className="h-5 w-5" />
+                )}
+              </button>
+            </div>
+            <p className="text-xs text-gray-400 mt-3 text-center">
+              Press Enter to send • Shift + Enter for new line
+            </p>
+          </form>
+        </div>
+      </div>
+    </div>
+  );
 };
 
 export default QueryDetail;

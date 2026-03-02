@@ -1,21 +1,21 @@
-'use client';
+"use client";
 
-import { useState, useEffect, useRef } from 'react';
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { 
-  Bell, 
-  X, 
-  Check, 
-  Clock, 
-  CheckCircle, 
-  AlertCircle, 
-  MessageSquare, 
+import { useState, useEffect, useRef } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import {
+  Bell,
+  X,
+  Check,
+  Clock,
+  CheckCircle,
+  AlertCircle,
+  MessageSquare,
   FileText,
   Info,
-  Calendar
-} from 'lucide-react';
-import { useStudent } from '@/app/context/StudentContext';
+  Calendar,
+} from "lucide-react";
+import { useStudent } from "@/app/context/StudentContext";
 
 const iconMap = {
   Clock: Clock,
@@ -24,20 +24,20 @@ const iconMap = {
   MessageSquare: MessageSquare,
   FileText: FileText,
   Info: Info,
-  Calendar: Calendar
+  Calendar: Calendar,
 };
 
 export default function NotificationBell() {
   const [isOpen, setIsOpen] = useState(false);
-  const { 
-    notifications, 
-    unreadCount, 
-    markNotificationAsRead, 
+  const {
+    notifications,
+    unreadCount,
+    markNotificationAsRead,
     markAllNotificationsAsRead,
     deleteNotification,
-    loading 
+    loading,
   } = useStudent();
-  
+
   const dropdownRef = useRef(null);
   const router = useRouter();
 
@@ -48,9 +48,9 @@ export default function NotificationBell() {
         setIsOpen(false);
       }
     }
-    
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   const formatTime = (timestamp) => {
@@ -61,7 +61,7 @@ export default function NotificationBell() {
     const diffHours = Math.floor(diffMs / 3600000);
     const diffDays = Math.floor(diffMs / 86400000);
 
-    if (diffMins < 1) return 'Just now';
+    if (diffMins < 1) return "Just now";
     if (diffMins < 60) return `${diffMins}m ago`;
     if (diffHours < 24) return `${diffHours}h ago`;
     if (diffDays < 7) return `${diffDays}d ago`;
@@ -90,12 +90,28 @@ export default function NotificationBell() {
 
   const getTypeStyles = (type) => {
     const styles = {
-      status_change: { bg: 'bg-yellow-50', icon: Clock, color: 'text-yellow-600' },
-      announcement: { bg: 'bg-purple-50', icon: AlertCircle, color: 'text-purple-600' },
-      message: { bg: 'bg-blue-50', icon: MessageSquare, color: 'text-blue-600' },
-      resolved: { bg: 'bg-green-50', icon: CheckCircle, color: 'text-green-600' },
-      course: { bg: 'bg-indigo-50', icon: FileText, color: 'text-indigo-600' },
-      default: { bg: 'bg-gray-50', icon: Info, color: 'text-gray-600' }
+      status_change: {
+        bg: "bg-yellow-50",
+        icon: Clock,
+        color: "text-yellow-600",
+      },
+      announcement: {
+        bg: "bg-purple-50",
+        icon: AlertCircle,
+        color: "text-purple-600",
+      },
+      message: {
+        bg: "bg-blue-50",
+        icon: MessageSquare,
+        color: "text-blue-600",
+      },
+      resolved: {
+        bg: "bg-green-50",
+        icon: CheckCircle,
+        color: "text-green-600",
+      },
+      course: { bg: "bg-indigo-50", icon: FileText, color: "text-indigo-600" },
+      default: { bg: "bg-gray-50", icon: Info, color: "text-gray-600" },
     };
     return styles[type] || styles.default;
   };
@@ -109,13 +125,13 @@ export default function NotificationBell() {
         aria-label="View notifications"
       >
         <Bell className="h-6 w-6 group-hover:scale-110 transition-transform" />
-        
+
         {/* Notification Badge */}
         {unreadCount > 0 && (
           <>
             <span className="absolute top-1 right-1 h-2.5 w-2.5 bg-red-500 rounded-full ring-2 ring-white animate-pulse"></span>
             <span className="absolute -top-1 -right-1 min-w-[20px] h-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center px-1 ring-2 ring-white shadow-lg">
-              {unreadCount > 99 ? '99+' : unreadCount}
+              {unreadCount > 99 ? "99+" : unreadCount}
             </span>
           </>
         )}
@@ -150,7 +166,10 @@ export default function NotificationBell() {
               // Loading Skeleton
               <div className="p-4 space-y-3">
                 {[1, 2, 3].map((i) => (
-                  <div key={i} className="flex items-start space-x-3 animate-pulse">
+                  <div
+                    key={i}
+                    className="flex items-start space-x-3 animate-pulse"
+                  >
                     <div className="w-8 h-8 bg-gray-200 rounded-lg"></div>
                     <div className="flex-1 space-y-2">
                       <div className="h-4 bg-gray-200 rounded w-3/4"></div>
@@ -163,12 +182,12 @@ export default function NotificationBell() {
               notifications.map((notification) => {
                 const styles = getTypeStyles(notification.type);
                 const IconComponent = iconMap[notification.icon] || styles.icon;
-                
+
                 return (
                   <div
                     key={notification.id}
                     className={`relative hover:bg-gray-50 transition-colors group ${
-                      !notification.read ? 'bg-indigo-50/20' : ''
+                      !notification.read ? "bg-indigo-50/20" : ""
                     }`}
                   >
                     <div
@@ -177,16 +196,24 @@ export default function NotificationBell() {
                     >
                       <div className="flex items-start space-x-3">
                         {/* Icon */}
-                        <div className={`flex-shrink-0 w-8 h-8 ${notification.bgColor || styles.bg} rounded-lg flex items-center justify-center`}>
-                          <IconComponent className={`h-4 w-4 ${notification.iconColor || styles.color}`} />
+                        <div
+                          className={`flex-shrink-0 w-8 h-8 ${notification.bgColor || styles.bg} rounded-lg flex items-center justify-center`}
+                        >
+                          <IconComponent
+                            className={`h-4 w-4 ${notification.iconColor || styles.color}`}
+                          />
                         </div>
-                        
+
                         {/* Content */}
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between">
-                            <p className={`text-sm font-medium ${
-                              !notification.read ? 'text-gray-900' : 'text-gray-600'
-                            }`}>
+                            <p
+                              className={`text-sm font-medium ${
+                                !notification.read
+                                  ? "text-gray-900"
+                                  : "text-gray-600"
+                              }`}
+                            >
                               {notification.title}
                             </p>
                             <span className="text-xs text-gray-400 ml-2">
@@ -196,7 +223,7 @@ export default function NotificationBell() {
                           <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">
                             {notification.message}
                           </p>
-                          
+
                           {/* Unread indicator */}
                           {!notification.read && (
                             <span className="absolute top-4 right-12 h-2 w-2 bg-indigo-600 rounded-full"></span>
@@ -204,10 +231,12 @@ export default function NotificationBell() {
                         </div>
                       </div>
                     </div>
-                    
+
                     {/* Remove button */}
                     <button
-                      onClick={(e) => handleRemoveNotification(e, notification.id)}
+                      onClick={(e) =>
+                        handleRemoveNotification(e, notification.id)
+                      }
                       className="absolute top-4 right-4 text-gray-400 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
                       aria-label="Remove notification"
                     >
@@ -221,8 +250,12 @@ export default function NotificationBell() {
                 <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
                   <Bell className="h-8 w-8 text-gray-400" />
                 </div>
-                <p className="text-sm font-medium text-gray-700">No notifications</p>
-                <p className="text-xs text-gray-500 mt-1">We'll notify you when something arrives</p>
+                <p className="text-sm font-medium text-gray-700">
+                  No notifications
+                </p>
+                <p className="text-xs text-gray-500 mt-1">
+                  We'll notify you when something arrives
+                </p>
               </div>
             )}
           </div>
