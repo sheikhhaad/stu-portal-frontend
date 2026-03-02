@@ -20,7 +20,7 @@ export function StudentProvider({ children }) {
         if (storedStudent) {
           const stuid = JSON.parse(storedStudent);
           const res = await axios.get(
-            `${process.env.NEXT_PUBLIC_API_URL}/api/auth/student/${stuid}`,
+            `https://stu-portal-backend.vercel.app/api/auth/student/${stuid}`,
           );
           setStudent(res.data.student); // student object with _id
         }

@@ -22,10 +22,10 @@ export default function Dashboard() {
     if (!student) return;
     const fetchEnrolledCourses = async () => {
       try {
-        const enrollmentRes = await axios.get(
-          `${process.env.NEXT_PUBLIC_API_URL}/api/enrollments/student/${student._id}`,
+        const res = await axios.get(
+          `https://stu-portal-backend.vercel.app/api/enrollments/student/${student._id}`,
         );
-        setEnrolledCourses(enrollmentRes.data.courses || []);
+        setEnrolledCourses(res.data.courses || []);
       } catch (error) {
         console.error("Error fetching enrolled courses", error);
       } finally {

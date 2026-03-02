@@ -34,8 +34,8 @@ export default function SubmitQuery() {
       };
 
       const res = await axios.post(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/queries/create`,
-        payload,
+        `https://stu-portal-backend.vercel.app/api/queries/create`,
+        formData,
         { withCredentials: true },
       );
 

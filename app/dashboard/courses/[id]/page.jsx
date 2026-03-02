@@ -61,7 +61,7 @@ export default function CourseDetailPage() {
       try {
         setLoading(true);
         const enrollmentRes = await axios.get(
-          `${process.env.NEXT_PUBLIC_API_URL}/api/enrollments/student/${student._id}`,
+          `https://stu-portal-backend.vercel.app/api/enrollments/student/${student._id}`,
         );
         const fetchedCourses = enrollmentRes.data.courses || [];
         const found = fetchedCourses.find((c) => c._id === id || c.id === id);
@@ -86,7 +86,7 @@ export default function CourseDetailPage() {
     const fetchTeacherDetails = async () => {
       try {
         const teacherRes = await axios.get(
-          `${process.env.NEXT_PUBLIC_API_URL}/api/auth/teacher/${id}`,
+          `https://stu-portal-backend.vercel.app/api/auth/teacher/${id}`,
         );
         setTeacher(teacherRes.data.teacher);
       } catch (error) {
@@ -134,7 +134,7 @@ export default function CourseDetailPage() {
         teacher_id: teacher._id,
       };
       const response = await axios.post(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/queries/create`,
+        `https://stu-portal-backend.vercel.app/api/queries/create`,
         payload,
         { withCredentials: true },
       );
