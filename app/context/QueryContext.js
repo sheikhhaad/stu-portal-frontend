@@ -25,7 +25,7 @@ export function QueryProvider({ children }) {
       setLoading(true);
 
       const res = await axios.get(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/queries/all`,
+        `https://stu-portal-backend.vercel.app/api/queries/all`,
         {
           withCredentials: true,
         },
@@ -50,7 +50,7 @@ export function QueryProvider({ children }) {
 
       try {
         const res = await axios.get(
-          `${process.env.NEXT_PUBLIC_API_URL}/api/queries/${student._id}/course/${courseId}`,
+          `https://stu-portal-backend.vercel.app/api/queries/${student._id}/course/${courseId}`,
           { withCredentials: true },
         );
 
