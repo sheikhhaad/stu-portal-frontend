@@ -31,7 +31,7 @@ export default function Page() {
       return;
     }
     let res = await axios.post(
-      `https://stu-portal-backend.vercel.app/api/auth/register`,
+      `${process.env.NEXT_PUBLIC_API_URL}/api/auth/register`,
       {
         rollNumber: stuId.toUpperCase(),
         email,

@@ -54,6 +54,23 @@ export default function CourseDetailPage() {
   const [submitError, setSubmitError] = useState("");
 
   const [teacher, setTeacher] = useState(null);
+  const [teacherAnnouncements, setTeacherAnnouncements] = useState([]);
+
+  const fetchTeacherAnnouncement = async () => {
+    try {
+      const res = await axios.get(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/announcements/${teacher._id}/course/${id}`,
+      );
+      setTeacherAnnouncements(Array.isArray(res.data) ? res.data : []);
+    } catch (error) {
+      console.error("Error fetching teacher announcement:", error);
+    }
+  };
+
+  useEffect(() => {
+    if (!teacher) return;
+    fetchTeacherAnnouncement();
+  }, [teacher]);
 
   useEffect(() => {
     if (!student || !id) return;
@@ -61,7 +78,7 @@ export default function CourseDetailPage() {
       try {
         setLoading(true);
         const enrollmentRes = await axios.get(
-          `https://stu-portal-backend.vercel.app/api/enrollments/student/${student._id}`,
+          `${process.env.NEXT_PUBLIC_API_URL}/api/enrollments/student/${student._id}`,
         );
         const fetchedCourses = enrollmentRes.data.courses || [];
         const found = fetchedCourses.find((c) => c._id === id || c.id === id);
@@ -86,7 +103,7 @@ export default function CourseDetailPage() {
     const fetchTeacherDetails = async () => {
       try {
         const teacherRes = await axios.get(
-          `https://stu-portal-backend.vercel.app/api/auth/teacher/${id}`,
+          `${process.env.NEXT_PUBLIC_API_URL}/api/auth/teacher/${id}`,
         );
         setTeacher(teacherRes.data.teacher);
       } catch (error) {
@@ -134,7 +151,7 @@ export default function CourseDetailPage() {
         teacher_id: teacher._id,
       };
       const response = await axios.post(
-        `https://stu-portal-backend.vercel.app/api/queries/create`,
+        `${process.env.NEXT_PUBLIC_API_URL}/api/queries/create`,
         payload,
         { withCredentials: true },
       );
@@ -437,25 +454,44 @@ export default function CourseDetailPage() {
               </div>
             </div>
 
-            {/* Enrollment ID Card */}
-            <div className="bg-gradient-to-br from-slate-900 to-slate-800 rounded-2xl p-6 text-white relative overflow-hidden group/enroll shadow-lg">
-              <div className="absolute top-3 right-3 opacity-[0.07] group-hover/enroll:opacity-[0.12] transition-opacity">
-                <GraduationCap className="w-20 h-20" />
+            {/* Teacher Announcements Card */}
+            <div className="bg-gradient-to-br from-indigo-600 via-indigo-700 to-indigo-800 rounded-2xl p-6 text-white relative overflow-hidden group/announcement shadow-lg">
+              <div className="absolute top-3 right-3 opacity-[0.1] group-hover/announcement:opacity-[0.2] transition-opacity">
+                <MessageSquare className="w-16 h-16" />
               </div>
               <div className="flex items-center gap-2 mb-4">
-                <div className="w-7 h-7 bg-indigo-500/20 rounded-lg flex items-center justify-center">
-                  <Users className="h-3.5 w-3.5 text-indigo-400" />
+                <div className="w-7 h-7 bg-white/20 rounded-lg flex items-center justify-center">
+                  <Plus className="h-3.5 w-3.5 text-white" />
                 </div>
-                <h3 className="text-xs font-bold text-indigo-400 uppercase tracking-widest">
-                  Enrollment ID
+                <h3 className="text-xs font-bold text-white/90 uppercase tracking-widest">
+                  Recent Announcements
                 </h3>
               </div>
-              <p className="text-2xl font-mono font-extrabold tracking-wider text-white relative z-10">
-                #{student.rollNumber || student._id.slice(-6)}
-              </p>
-              <p className="text-[10px] text-slate-500 mt-1.5 uppercase font-bold tracking-widest relative z-10">
-                Verified Student Access
-              </p>
+
+              <div className="space-y-4 relative z-10">
+                {teacherAnnouncements.length > 0 ? (
+                  teacherAnnouncements.map((ann, idx) => (
+                    <div
+                      key={ann._id || idx}
+                      className="border-l-2 border-white/30 pl-4 py-1"
+                    >
+                      <p className="text-sm font-medium text-white leading-relaxed">
+                        {ann.text}
+                      </p>
+                      <p className="text-[10px] text-indigo-200 mt-2 font-bold uppercase tracking-tighter">
+                        {new Date(ann.createdAt).toLocaleDateString("en-US", {
+                          month: "short",
+                          day: "numeric",
+                        })}
+                      </p>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-sm text-indigo-100 italic opacity-70">
+                    No recent announcements from your teacher.
+                  </p>
+                )}
+              </div>
             </div>
           </div>
 
@@ -494,14 +530,14 @@ export default function CourseDetailPage() {
                   </div>
                 ) : courseQueries.length > 0 ? (
                   <div className="space-y-3">
-                    {courseQueries.map((query) => {
+                    {courseQueries.map((query, index) => {
                       const statusInfo = getStatusInfo(query.status);
                       const StatusIcon = statusInfo.icon;
                       const isExpanded = expandedQueries[query._id];
 
                       return (
                         <div
-                          key={query._id}
+                          key={query._id || index}
                           className={`border rounded-xl overflow-hidden transition-all duration-300 group/query ${
                             isExpanded
                               ? "border-indigo-200 shadow-md ring-1 ring-indigo-50"

@@ -47,7 +47,7 @@ const QueryDetail = () => {
     setFetchingMessages(true);
     try {
       const res = await axios.get(
-        `https://stu-portal-backend.vercel.app/api/messages/${query._id}`,
+        `${process.env.NEXT_PUBLIC_API_URL}/api/messages/${query._id}`,
         { withCredentials: true },
       );
 
@@ -94,7 +94,7 @@ const QueryDetail = () => {
     setSending(true);
     try {
       const res = await axios.post(
-        `https://stu-portal-backend.vercel.app/api/messages/send`,
+        `${process.env.NEXT_PUBLIC_API_URL}/api/messages/send`,
         {
           query_id: id,
           sender_id: student._id,

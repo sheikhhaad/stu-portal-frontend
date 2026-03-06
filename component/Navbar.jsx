@@ -9,15 +9,14 @@ import NotificationBell from "./NotificationBell";
 import { useRouter } from "next/navigation";
 
 export default function Navbar() {
-  const pathname  = usePathname();
+  const pathname = usePathname();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { student } = useStudent();
   const router = useRouter();
 
   const navLinks = [
-    { href: "/dashboard",              label: "Dashboard" },
-    { href: "/dashboard/my-query",     label: "My Queries" },
-    { href: "/dashboard/submit-query", label: "Submit Query" },
+    { href: "/dashboard", label: "Dashboard" },
+    { href: "/dashboard/my-query", label: "My Queries" },
   ];
 
   const isActive = (path) => pathname === path;
@@ -26,17 +25,17 @@ export default function Navbar() {
     <nav className="bg-white/90 backdrop-blur-md border-b border-slate-200/80 sticky top-0 z-50 shadow-sm shadow-slate-100/50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
-
           {/* ── Left: Logo + Nav ── */}
           <div className="flex items-center gap-8">
-
             {/* Logo */}
             <Link
               href="/dashboard"
               className="flex items-center gap-2.5 group flex-shrink-0"
             >
               <div className="h-9 w-9 bg-gradient-to-br from-indigo-600 to-indigo-700 rounded-xl flex items-center justify-center shadow-md shadow-indigo-200 group-hover:scale-105 transition-transform duration-200">
-                <span className="text-white font-extrabold text-sm tracking-tight">SP</span>
+                <span className="text-white font-extrabold text-sm tracking-tight">
+                  SP
+                </span>
               </div>
               <span className="text-base font-extrabold text-slate-900 tracking-tight hidden sm:block">
                 Student<span className="text-indigo-600">Portal</span>
@@ -51,9 +50,10 @@ export default function Navbar() {
                   href={link.href}
                   className={`
                     relative px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200
-                    ${isActive(link.href)
-                      ? "text-indigo-600 bg-indigo-50"
-                      : "text-slate-500 hover:text-slate-800 hover:bg-slate-50"
+                    ${
+                      isActive(link.href)
+                        ? "text-indigo-600 bg-indigo-50"
+                        : "text-slate-500 hover:text-slate-800 hover:bg-slate-50"
                     }
                   `}
                 >
@@ -69,7 +69,6 @@ export default function Navbar() {
 
           {/* ── Right: Notification + Profile ── */}
           <div className="flex items-center gap-3">
-
             {/* Notification Bell */}
             <NotificationBell />
 
@@ -112,7 +111,11 @@ export default function Navbar() {
               onClick={() => setIsMenuOpen(!isMenuOpen)}
               className="md:hidden flex items-center justify-center w-9 h-9 rounded-xl text-slate-500 hover:text-slate-700 hover:bg-slate-100 transition-colors"
             >
-              {isMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+              {isMenuOpen ? (
+                <X className="h-5 w-5" />
+              ) : (
+                <Menu className="h-5 w-5" />
+              )}
             </button>
           </div>
         </div>
@@ -121,7 +124,6 @@ export default function Navbar() {
       {/* ── Mobile Menu ── */}
       {isMenuOpen && (
         <div className="md:hidden border-t border-slate-100 bg-white">
-
           {/* Nav links */}
           <div className="px-4 py-3 space-y-1">
             {navLinks.map((link) => (
@@ -131,9 +133,10 @@ export default function Navbar() {
                 onClick={() => setIsMenuOpen(false)}
                 className={`
                   flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all
-                  ${isActive(link.href)
-                    ? "bg-indigo-50 text-indigo-700 border border-indigo-100"
-                    : "text-slate-600 hover:bg-slate-50 hover:text-slate-800"
+                  ${
+                    isActive(link.href)
+                      ? "bg-indigo-50 text-indigo-700 border border-indigo-100"
+                      : "text-slate-600 hover:bg-slate-50 hover:text-slate-800"
                   }
                 `}
               >
@@ -148,7 +151,10 @@ export default function Navbar() {
           {/* Mobile Profile row */}
           <div
             className="mx-4 mb-4 mt-1 flex items-center gap-3 p-3.5 bg-slate-50 rounded-2xl border border-slate-100 cursor-pointer hover:border-indigo-100 hover:bg-indigo-50/30 transition-all"
-            onClick={() => { router.push("/dashboard/profile"); setIsMenuOpen(false); }}
+            onClick={() => {
+              router.push("/dashboard/profile");
+              setIsMenuOpen(false);
+            }}
           >
             <div className="relative flex-shrink-0">
               <div className="h-10 w-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 p-[2px] shadow-sm">
@@ -163,8 +169,12 @@ export default function Navbar() {
               <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-500 border-2 border-white rounded-full" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-bold text-slate-800 truncate">{student?.name}</p>
-              <p className="text-xs text-slate-400 font-medium truncate">{student?.email}</p>
+              <p className="text-sm font-bold text-slate-800 truncate">
+                {student?.name}
+              </p>
+              <p className="text-xs text-slate-400 font-medium truncate">
+                {student?.email}
+              </p>
             </div>
             <Bell className="h-4 w-4 text-slate-400 flex-shrink-0" />
           </div>

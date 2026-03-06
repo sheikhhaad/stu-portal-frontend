@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useStudent } from "@/app/context/StudentContext";
 
 const STATUS_CONFIG = {
   pending: {
@@ -57,25 +58,17 @@ export default function MyQueries() {
   const [filter, setFilter] = useState("All");
   const [searchTerm, setSearchTerm] = useState("");
   const router = useRouter();
+  let { student } = useStudent();
 
   const allQueries = queries || [];
 
   // Count per status
-  const counts = {
-    All: allQueries.length,
-    Pending: allQueries.filter(
-      (q) => (q.status || "pending").toLowerCase() === "pending",
-    ).length,
-    "In Progress": allQueries.filter(
-      (q) => (q.status || "").toLowerCase() === "in progress",
-    ).length,
-    Resolved: allQueries.filter(
-      (q) => (q.status || "").toLowerCase() === "resolved",
-    ).length,
-  };
 
   const filteredQueries = allQueries.filter((query) => {
+    let studentQuery = query.student_id === student?._id;
+    console.log(studentQuery);
     const qStatus = query.status || "Pending";
+
     const matchFilter =
       filter === "All" || qStatus.toLowerCase() === filter.toLowerCase();
     const courseTitle = String(query.course || "");
@@ -83,8 +76,21 @@ export default function MyQueries() {
     const matchSearch =
       courseTitle.toLowerCase().includes(searchTerm.toLowerCase()) ||
       queryTxt.toLowerCase().includes(searchTerm.toLowerCase());
-    return matchFilter && matchSearch;
+    return studentQuery && matchFilter && matchSearch;
   });
+
+  const counts = {
+    All: filteredQueries.length,
+    Pending: filteredQueries.filter(
+      (q) => (q.status || "pending").toLowerCase() === "pending",
+    ).length,
+    "In Progress": filteredQueries.filter(
+      (q) => (q.status || "").toLowerCase() === "in progress",
+    ).length,
+    Resolved: filteredQueries.filter(
+      (q) => (q.status || "").toLowerCase() === "resolved",
+    ).length,
+  };
 
   const FILTER_TABS = [
     { key: "All", icon: Filter },

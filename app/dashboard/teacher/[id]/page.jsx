@@ -74,6 +74,36 @@ const getDuration = (start, end) => {
   return m ? `${h}h ${m}m` : `${h}h`;
 };
 
+// Generate 15-minute intervals between start and end times
+const generateTimeBlocks = (slot) => {
+  if (!slot.start_time || !slot.end_time) return [];
+  const blocks = [];
+  const start = new Date(`1970-01-01T${slot.start_time}`);
+  const end = new Date(`1970-01-01T${slot.end_time}`);
+
+  let current = start;
+  while (current < end) {
+    const next = new Date(current.getTime() + 15 * 60000); // add 15 minutes
+    if (next > end) break;
+
+    blocks.push({
+      start_time: current.toLocaleTimeString("en-US", {
+        hour12: false,
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
+      end_time: next.toLocaleTimeString("en-US", {
+        hour12: false,
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
+    });
+
+    current = next;
+  }
+  return blocks;
+};
+
 const FILTER_OPTIONS = { ALL: "all", AVAILABLE: "available", BOOKED: "booked" };
 
 // ── Component ────────────────────────────────────────────────────
@@ -97,9 +127,10 @@ const TeacherDetail = () => {
     (async () => {
       try {
         const res = await axios.get(
-          `https://stu-portal-backend.vercel.app/api/availability/${id}`,
+          `${process.env.NEXT_PUBLIC_API_URL}/api/availability/${id}`,
         );
         setSlots(res.data || []);
+        console.log(res.data);
       } catch {
         setError("Failed to load availability slots.");
       } finally {
@@ -117,10 +148,9 @@ const TeacherDetail = () => {
       try {
         // Fetch once using first slot — backend returns ALL sessions for this student+teacher
         const res = await axios.get(
-          `https://stu-portal-backend.vercel.app/api/availability/student/${student._id}`,
+          `${process.env.NEXT_PUBLIC_API_URL}/api/session/student/${student._id}`,
           { withCredentials: true },
         );
-        console.log(res.data);
 
         // ✅ Normalise — your API returns [{...}] plain array
         const raw = res.data;
@@ -138,41 +168,39 @@ const TeacherDetail = () => {
     })();
   }, [id, student, slots]); // ← depends on slots so it fires after slots load
 
-  // ── Find session for a given slot._id ──
+  // ── Find sessions for a given slot._id ──
   // session.slot_id === slot._id
-  const getSessionForSlot = (slotId) =>
-    sessions.find((s) => s.slot_id === slotId) ?? null;
+  const getSessionsForSlot = (slotId) =>
+    sessions.filter((s) => s.slot_id === slotId);
 
   // ── Book slot ──
-  const bookSlot = async (slotId, slot) => {
+  const bookSlot = async (slotId, slot, blockStartTime) => {
     if (!student) {
       alert("Please login to book a slot");
       return;
     }
-    let duration = prompt("Enter duration in minutes");
-    if (!duration) {
-      alert("Please enter duration");
-      return;
-    }
 
     try {
-      setBookingId(slotId);
+      // Using a compound ID for UI state during booking
+      const blockId = `${slotId}-${blockStartTime}`;
+      setBookingId(blockId);
+
+      const requestedTimeIso = new Date(
+        `${slot.date}T${blockStartTime}`,
+      ).toISOString();
       const res = await axios.put(
-        `https://stu-portal-backend.vercel.app/api/availability/book/${slotId}`,
+        `${process.env.NEXT_PUBLIC_API_URL}/api/session/book/${slotId}`,
         {
           student_id: student._id,
           teacher_id: id,
-          duration,
-          requested_time: new Date(
-            `${slot.date}T${slot.start_time}`,
-          ).toISOString(),
+          duration: 15,
+          requested_time: requestedTimeIso,
         },
       );
       const newSession = res.data?.session;
       if (newSession) setSessions((prev) => [...prev, newSession]);
-      setSlots((prev) =>
-        prev.map((s) => (s._id === slotId ? { ...s, is_booked: true } : s)),
-      );
+      // We no longer mark the ENTIRE slot as booked, only individual sessions dictate block state
+      setSlots((prev) => [...prev]); // shallow UI update copy if needed
     } catch (err) {
       alert(err.response?.data?.message || "Failed to book slot.");
     } finally {
@@ -607,20 +635,34 @@ const TeacherDetail = () => {
                               {!isCollapsed && (
                                 <div className="border-t border-slate-100 bg-slate-50/50 p-5">
                                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    {visible.map((slot) => (
-                                      <SlotCard
-                                        key={slot._id}
-                                        slot={slot}
-                                        isBooked={slot.is_booked}
-                                        duration={getDuration(
-                                          slot.start_time,
-                                          slot.end_time,
-                                        )}
-                                        isBooking={bookingId === slot._id}
-                                        onBook={bookSlot}
-                                        session={getSessionForSlot(slot._id)} // ✅ slot._id === session.slot_id
-                                      />
-                                    ))}
+                                    {visible.map((slot) => {
+                                      const timeBlocks =
+                                        generateTimeBlocks(slot);
+                                      const slotSessions = getSessionsForSlot(
+                                        slot._id,
+                                      );
+
+                                      return (
+                                        <SlotCard
+                                          key={slot._id}
+                                          slot={slot}
+                                          timeBlocks={timeBlocks}
+                                          slotSessions={slotSessions}
+                                          duration={getDuration(
+                                            slot.start_time,
+                                            slot.end_time,
+                                          )}
+                                          bookingId={bookingId}
+                                          onBook={(blockStartTime) =>
+                                            bookSlot(
+                                              slot._id,
+                                              slot,
+                                              blockStartTime,
+                                            )
+                                          }
+                                        />
+                                      );
+                                    })}
                                   </div>
                                 </div>
                               )}
