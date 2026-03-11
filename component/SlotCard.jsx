@@ -5,14 +5,253 @@ import {
   Clock,
   Lock,
   Loader2,
-  CalendarCheck,
   Video,
-  ExternalLink,
-  Hash,
   Timer,
+  CheckCircle,
+  CircleDot,
+  ChevronRight,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 
+// ── Format helpers ───────────────────────────────────────────────
+const fmt = (timeStr) => {
+  if (!timeStr) return "–";
+  try {
+    const d = timeStr.includes("T")
+      ? new Date(timeStr)
+      : new Date(`1970-01-01T${timeStr}`);
+    return d.toLocaleTimeString("en-US", {
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
+    });
+  } catch {
+    return timeStr;
+  }
+};
+
+const getCountdown = (sessionStart, now) => {
+  if (!sessionStart) return null;
+  const diff = new Date(sessionStart) - now;
+  if (diff <= 0) return null;
+  const total = Math.ceil(diff / 60000);
+  if (total < 60) return `${total}m`;
+  const h = Math.floor(total / 60),
+    m = total % 60;
+  return m ? `${h}h ${m}m` : `${h}h`;
+};
+
+// ── Status config ───────────────────────────────────────────────
+const STATUS = {
+  available: {
+    dot: "#22c55e",
+    bg: "#f0fdf4",
+    border: "#bbf7d0",
+    label: "Available",
+    labelColor: "#15803d",
+    pulse: true,
+  },
+  pending: {
+    dot: "#f59e0b",
+    bg: "#fffbeb",
+    border: "#fde68a",
+    label: "Pending",
+    labelColor: "#b45309",
+    pulse: false,
+  },
+  accepted: {
+    dot: "#7c3aed",
+    bg: "#f5f3ff",
+    border: "#ddd6fe",
+    label: "Confirmed",
+    labelColor: "#6d28d9",
+    pulse: false,
+  },
+  expired: {
+    dot: "#94a3b8",
+    bg: "#f8fafc",
+    border: "#e2e8f0",
+    label: "Expired",
+    labelColor: "#64748b",
+    pulse: false,
+  },
+};
+
+// ── Single time-block row ───────────────────────────────────────
+const TimeBlock = ({ block, slot, session, bookingId, onBook }) => {
+  const [now, setNow] = useState(new Date());
+  useEffect(() => {
+    const t = setInterval(() => setNow(new Date()), 30_000);
+    return () => clearInterval(t);
+  }, []);
+
+  const expiryIso = new Date(`${slot.date}T${block.end_time}`);
+  const isExpired = now > expiryIso;
+
+  const isPending = session?.status === "pending";
+  const isAccepted = session?.status === "accepted";
+  const isAvailable = !session && !isExpired;
+
+  const currentBlockId = `${slot._id}-${block.start_time}`;
+  const isBookingThis = bookingId === currentBlockId;
+
+  const canJoin =
+    isAccepted && session?.session_start
+      ? new Date(session.session_start) <= now
+      : false;
+  const countdown = getCountdown(session?.session_start, now);
+
+  const statusKey = isExpired
+    ? "expired"
+    : isAvailable
+      ? "available"
+      : isPending
+        ? "pending"
+        : "accepted";
+  const s = STATUS[statusKey];
+
+  return (
+    <div
+      className="group relative flex items-center gap-3 px-4 py-3 rounded-2xl border transition-all duration-200"
+      style={{
+        background: s.bg,
+        borderColor: isAvailable && !isBookingThis ? "transparent" : s.border,
+        cursor: isAvailable && !isBookingThis ? "pointer" : "default",
+        boxShadow: "none",
+      }}
+      onClick={() => isAvailable && !isBookingThis && onBook(block.start_time)}
+      onMouseEnter={(e) => {
+        if (isAvailable && !isBookingThis) {
+          e.currentTarget.style.borderColor = s.border;
+          e.currentTarget.style.boxShadow = `0 2px 12px ${s.dot}22`;
+          e.currentTarget.style.transform = "translateX(2px)";
+        }
+      }}
+      onMouseLeave={(e) => {
+        if (isAvailable && !isBookingThis) {
+          e.currentTarget.style.borderColor = "transparent";
+          e.currentTarget.style.boxShadow = "none";
+          e.currentTarget.style.transform = "translateX(0)";
+        }
+      }}
+    >
+      {/* Status dot */}
+      <div className="relative flex-shrink-0 flex items-center justify-center w-5 h-5">
+        {s.pulse && (
+          <span
+            className="absolute inline-flex h-full w-full rounded-full opacity-60"
+            style={{
+              background: s.dot,
+              animation: "ping 1.5s cubic-bezier(0,0,0.2,1) infinite",
+            }}
+          />
+        )}
+        <span
+          className="relative inline-flex rounded-full w-2.5 h-2.5"
+          style={{ background: s.dot }}
+        />
+      </div>
+
+      {/* Time range */}
+      <div className="flex items-center gap-1.5 min-w-0 flex-1">
+        <span
+          className="text-sm font-black tabular-nums"
+          style={{ color: "#0f172a", fontFamily: "'DM Mono', monospace" }}
+        >
+          {fmt(block.start_time)}
+        </span>
+        <ChevronRight
+          className="h-3 w-3 flex-shrink-0"
+          style={{ color: "#94a3b8" }}
+        />
+        <span
+          className="text-sm font-black tabular-nums"
+          style={{ color: "#0f172a", fontFamily: "'DM Mono', monospace" }}
+        >
+          {fmt(block.end_time)}
+        </span>
+        <span
+          className="ml-1 text-[10px] font-bold uppercase tracking-widest"
+          style={{ color: "#94a3b8" }}
+        >
+          15m
+        </span>
+      </div>
+
+      {/* Right: status badge OR action */}
+      <div className="flex-shrink-0 flex items-center gap-2">
+        {isAvailable ? (
+          isBookingThis ? (
+            <span
+              className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-xl"
+              style={{ background: "#ede9fe", color: "#7c3aed" }}
+            >
+              <Loader2 className="h-3 w-3 animate-spin" />
+              Booking…
+            </span>
+          ) : (
+            <span
+              className="flex items-center gap-1.5 text-xs font-black px-3 py-1.5 rounded-xl transition-all duration-150 group-hover:scale-105"
+              style={{ background: "#dcfce7", color: "#15803d" }}
+            >
+              Book
+              <ChevronRight className="h-3 w-3" />
+            </span>
+          )
+        ) : isExpired ? (
+          <span
+            className="flex items-center gap-1.5 text-[11px] font-bold px-3 py-1.5 rounded-xl"
+            style={{ background: "#f1f5f9", color: "#94a3b8" }}
+          >
+            <Clock className="h-3 w-3" />
+            Expired
+          </span>
+        ) : isPending ? (
+          <span
+            className="flex items-center gap-1.5 text-[11px] font-bold px-3 py-1.5 rounded-xl"
+            style={{ background: "#fef3c7", color: "#b45309" }}
+          >
+            <Clock className="h-3 w-3" />
+            Awaiting
+          </span>
+        ) : /* Accepted — show join or countdown */
+        isAccepted && session ? (
+          session.meeting_link && canJoin ? (
+            <a
+              href={session.meeting_link}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              className="flex items-center gap-1.5 text-[11px] font-black px-3 py-1.5 rounded-xl transition-all hover:opacity-90"
+              style={{ background: "#7c3aed", color: "#fff" }}
+            >
+              <Video className="h-3 w-3" />
+              Join
+            </a>
+          ) : (
+            <span
+              className="flex items-center gap-1.5 text-[11px] font-bold px-3 py-1.5 rounded-xl"
+              style={{ background: "#ede9fe", color: "#7c3aed" }}
+            >
+              <Timer className="h-3 w-3" />
+              {countdown ? `in ${countdown}` : "Ready"}
+            </span>
+          )
+        ) : (
+          <span
+            className="flex items-center gap-1.5 text-[11px] font-bold px-3 py-1.5 rounded-xl"
+            style={{ background: "#f1f5f9", color: "#64748b" }}
+          >
+            <Lock className="h-3 w-3" />
+            Booked
+          </span>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// ── Main SlotCard ───────────────────────────────────────────────
 export const SlotCard = ({
   slot,
   timeBlocks = [],
@@ -21,200 +260,125 @@ export const SlotCard = ({
   bookingId = null,
   onBook,
 }) => {
-  const [now, setNow] = useState(new Date());
+  const availCount = timeBlocks.filter((b) => {
+    const blockIso = new Date(`${slot.date}T${b.start_time}`);
+    const expiryIso = new Date(`${slot.date}T${b.end_time}`);
+    const isPast = new Date() > expiryIso;
 
-  // Auto-tick every 30s so the Join button unlocks automatically
-  useEffect(() => {
-    const t = setInterval(() => setNow(new Date()), 30_000);
-    return () => clearInterval(t);
-  }, []);
-
-  const formatTime = (timeStr) => {
-    if (!timeStr) return "-";
-    try {
-      const d = timeStr.includes("T")
-        ? new Date(timeStr)
-        : new Date(`1970-01-01T${timeStr}`);
-      return d.toLocaleTimeString("en-US", {
-        hour: "numeric",
-        minute: "2-digit",
-        hour12: true,
-      });
-    } catch {
-      return timeStr;
-    }
-  };
-
-  const formatDateTime = (iso) => {
-    if (!iso) return "";
-    try {
-      return new Date(iso).toLocaleString("en-US", {
-        month: "short",
-        day: "numeric",
-        hour: "numeric",
-        minute: "2-digit",
-        hour12: true,
-      });
-    } catch {
-      return iso;
-    }
-  };
-
-  const getCountdown = (sessionStart) => {
-    if (!sessionStart) return null;
-    const diff = new Date(sessionStart) - now;
-    if (diff <= 0) return null;
-    const total = Math.ceil(diff / 60000);
-    if (total < 60) return `${total}m`;
-    const h = Math.floor(total / 60),
-      m = total % 60;
-    return m ? `${h}h ${m}m` : `${h}h`;
-  };
+    return (
+      !isPast &&
+      !slotSessions.find(
+        (s) => new Date(s.requested_time).getTime() === blockIso.getTime(),
+      )
+    );
+  }).length;
 
   return (
-    <div className="group relative rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden transition-all duration-300 hover:border-indigo-200 hover:shadow-md">
-      {/* Top accent line */}
-      <div className="h-1 w-full bg-gradient-to-r from-indigo-400 to-purple-500 opacity-50 group-hover:opacity-100 transition-opacity duration-300" />
+    <div
+      className="rounded-3xl border overflow-hidden"
+      style={{
+        background: "#ffffff",
+        borderColor: "#e9e7e1",
+        boxShadow: "0 1px 4px rgba(0,0,0,0.05)",
+      }}
+    >
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&display=swap');
+        @keyframes ping {
+          75%, 100% { transform: scale(2); opacity: 0; }
+        }
+      `}</style>
 
-      <div className="p-5">
-        {/* ── Time Row ── */}
-        <div className="flex items-center gap-3.5 mb-5 pb-4 border-b border-slate-100">
-          <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl bg-indigo-50 text-indigo-500">
-            <Clock className="h-5 w-5" />
+      {/* Card header */}
+      <div
+        className="flex items-center justify-between px-5 py-4 border-b"
+        style={{ borderColor: "#f0ece4", background: "#fdfcfa" }}
+      >
+        <div className="flex items-center gap-3">
+          <div
+            className="w-9 h-9 rounded-2xl flex items-center justify-center flex-shrink-0"
+            style={{ background: "#ede9fe" }}
+          >
+            <Clock className="h-4 w-4 text-violet-600" />
           </div>
           <div>
-            <h3 className="text-base font-bold text-slate-800 leading-tight">
-              {formatTime(slot.start_time)} — {formatTime(slot.end_time)}
-            </h3>
-            <p className="text-xs text-slate-400 font-medium mt-0.5">
-              Available Block
+            <p
+              className="text-sm font-black"
+              style={{ color: "#0f172a", fontFamily: "'DM Mono', monospace" }}
+            >
+              {(() => {
+                const fmt12 = (t) => {
+                  if (!t) return "–";
+                  try {
+                    return new Date(`1970-01-01T${t}`).toLocaleTimeString(
+                      "en-US",
+                      {
+                        hour: "numeric",
+                        minute: "2-digit",
+                        hour12: true,
+                      },
+                    );
+                  } catch {
+                    return t;
+                  }
+                };
+                return `${fmt12(slot.start_time)} – ${fmt12(slot.end_time)}`;
+              })()}
+            </p>
+            <p
+              className="text-[10px] font-bold uppercase tracking-widest mt-0.5"
+              style={{ color: "#94a3b8" }}
+            >
+              {duration} window · {timeBlocks.length} blocks
             </p>
           </div>
         </div>
 
-        {/* ── 15-Min Blocks Grid ── */}
-        <div className="grid grid-cols-2 gap-3">
-          {timeBlocks.map((block, idx) => {
-            // Reconstruct block's local start time ISO from slot.date
+        {/* Available count badge */}
+        <div
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-black"
+          style={{
+            background: availCount > 0 ? "#dcfce7" : "#fee2e2",
+            color: availCount > 0 ? "#15803d" : "#dc2626",
+          }}
+        >
+          <span
+            className="w-1.5 h-1.5 rounded-full"
+            style={{ background: availCount > 0 ? "#22c55e" : "#ef4444" }}
+          />
+          {availCount > 0 ? `${availCount} open` : "Full"}
+        </div>
+      </div>
+
+      {/* Block list */}
+      <div className="p-4 space-y-2">
+        {timeBlocks.length === 0 ? (
+          <div
+            className="text-center py-6 text-sm font-semibold"
+            style={{ color: "#94a3b8" }}
+          >
+            No time blocks available
+          </div>
+        ) : (
+          timeBlocks.map((block, idx) => {
             const blockIso = new Date(
               `${slot.date}T${block.start_time}`,
             ).toISOString();
-
-            // Look for a session matching this exact requested block time
             const session = slotSessions.find(
               (s) => new Date(s.requested_time).toISOString() === blockIso,
             );
-
-            const isPending = session?.status === "pending";
-            const isAccepted = session?.status === "accepted";
-            const isAvailable = !session;
-
-            const currentBlockId = `${slot._id}-${block.start_time}`;
-            const isBookingThisBlock = bookingId === currentBlockId;
-
-            const canJoin =
-              isAccepted && session?.session_start
-                ? new Date(session.session_start) <= now
-                : false;
-            const countdown = getCountdown(session?.session_start);
-
             return (
-              <div
+              <TimeBlock
                 key={idx}
-                className="col-span-1 rounded-xl flex flex-col h-full border border-transparent"
-              >
-                {/* Visual Card Wrapper for the block */}
-                <div
-                  className={`
-                    relative p-3 rounded-xl border flex-grow flex flex-col justify-between transition-all duration-200
-                    ${isAvailable ? "bg-white border-slate-200 hover:border-indigo-400 hover:shadow-md hover:ring-2 hover:ring-indigo-50 cursor-pointer" : ""}
-                    ${isPending ? "bg-amber-50 border-amber-200" : ""}
-                    ${isAccepted ? "bg-slate-50 border-slate-200" : ""}
-                  `}
-                  onClick={() => {
-                    if (isAvailable && !isBookingThisBlock) {
-                      onBook(block.start_time);
-                    }
-                  }}
-                >
-                  <div className="flex justify-between items-start mb-2">
-                    <span className="text-sm font-bold text-slate-800">
-                      {formatTime(block.start_time)}
-                    </span>
-
-                    {/* Status Dot/Icon */}
-                    {isAvailable && (
-                      <span className="flex h-2 w-2 relative">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                        <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-                      </span>
-                    )}
-                    {isPending && <Clock className="h-4 w-4 text-amber-500" />}
-                    {isAccepted && <Lock className="h-4 w-4 text-slate-400" />}
-                  </div>
-
-                  {/* Status Label & Actions */}
-                  <div className="mt-auto pt-2">
-                    {isAvailable ? (
-                      isBookingThisBlock ? (
-                        <div className="flex items-center gap-1.5 text-xs font-semibold text-indigo-600">
-                          <Loader2 className="h-3 w-3 animate-spin" />{" "}
-                          Booking...
-                        </div>
-                      ) : (
-                        <div className="text-[11px] font-semibold text-emerald-600 tracking-wide uppercase">
-                          Available
-                        </div>
-                      )
-                    ) : isPending ? (
-                      <div className="text-[11px] font-semibold text-amber-600 leading-tight">
-                        Waiting approval...
-                      </div>
-                    ) : (
-                      <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1">
-                        Booked
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Zoom Info Panel for Accepted Blocks - Rendered below the block card */}
-                {isAccepted && session && (
-                  <div className="mt-2 text-left bg-indigo-50 rounded-lg p-2.5 border border-indigo-100/50 shadow-sm relative before:absolute before:-top-1.5 before:left-4 before:w-3 before:h-3 before:bg-indigo-50 before:border-t before:border-l before:border-indigo-100/50 before:rotate-45">
-                    <div className="flex items-center gap-1.5 mb-1.5">
-                      <Video className="h-3 w-3 text-indigo-600" />
-                      <span className="text-[10px] font-bold text-indigo-800 uppercase tracking-wider">
-                        Zoom
-                      </span>
-                    </div>
-
-                    {session.meeting_link ? (
-                      canJoin ? (
-                        <a
-                          href={session.meeting_link}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="block w-full py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] font-bold rounded-md text-center transition-colors"
-                        >
-                          Join Meeting
-                        </a>
-                      ) : (
-                        <div className="flex items-center gap-1 text-[10px] text-indigo-600 font-medium">
-                          <Timer className="h-3 w-3" />
-                          {countdown ? `Opens in ${countdown}` : "Ready"}
-                        </div>
-                      )
-                    ) : (
-                      <div className="text-[10px] text-slate-500 w-full truncate">
-                        No link yet
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
+                block={block}
+                slot={slot}
+                session={session}
+                bookingId={bookingId}
+                onBook={onBook}
+              />
             );
-          })}
-        </div>
+          })
+        )}
       </div>
     </div>
   );

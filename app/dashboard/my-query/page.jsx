@@ -8,14 +8,17 @@ import {
   Clock,
   MessageSquare,
   CheckCircle,
-  XCircle,
   Plus,
   Filter,
   Inbox,
+  Sparkles,
 } from "lucide-react";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useStudent } from "@/app/context/StudentContext";
+import Loading from "@/component/Loading";
+import Error from "@/component/Error";
+import { motion, AnimatePresence } from "framer-motion";
 
 const STATUS_CONFIG = {
   pending: {
@@ -54,19 +57,16 @@ const getStatusConfig = (status) =>
   STATUS_CONFIG[(status || "").toLowerCase()] || STATUS_CONFIG.default;
 
 export default function MyQueries() {
-  const { queries, loading } = useQueries();
+  const { queries, loading, error, fetchAllQueries } = useQueries();
   const [filter, setFilter] = useState("All");
   const [searchTerm, setSearchTerm] = useState("");
   const router = useRouter();
-  let { student } = useStudent();
+  const { student } = useStudent();
 
   const allQueries = queries || [];
 
-  // Count per status
-
   const filteredQueries = allQueries.filter((query) => {
-    let studentQuery = query.student_id === student?._id;
-    console.log(studentQuery);
+    const studentQuery = query.student_id === student?._id;
     const qStatus = query.status || "Pending";
 
     const matchFilter =
@@ -99,62 +99,75 @@ export default function MyQueries() {
     { key: "Resolved", icon: CheckCircle },
   ];
 
+  if (loading && queries.length === 0)
+    return <Loading message="Loading your discussion board..." />;
+  if (error) return <Error message={error} onRetry={fetchAllQueries} />;
+
   return (
-    <div className="min-h-screen bg-slate-50">
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      className="min-h-screen bg-slate-50/50"
+    >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
         {/* ── Page Header ── */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
           <div>
-            <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">
-              My Queries
-            </h1>
-            <p className="text-slate-400 text-sm font-medium mt-0.5">
-              Manage and track the status of your requests
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-200">
+                <MessageSquare className="h-5 w-5 text-white" />
+              </div>
+              <h1 className="text-3xl font-black text-slate-900 tracking-tight">
+                My Queries
+              </h1>
+            </div>
+            <p className="text-slate-400 font-bold uppercase tracking-tight text-xs">
+              Track and manage all your academic discussions
             </p>
           </div>
           <Link
             href="/dashboard/submit-query"
-            className="inline-flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-bold shadow-md shadow-indigo-200 transition-all hover:-translate-y-0.5 active:scale-95"
+            className="inline-flex items-center gap-2 px-6 py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-sm font-black shadow-xl shadow-indigo-100 transition-all hover:-translate-y-1 active:scale-95 group"
           >
-            <Plus className="h-4 w-4" />
+            <Plus className="h-5 w-5 group-hover:rotate-90 transition-transform" />
             New Query
           </Link>
         </div>
 
         {/* ── Search + Filters Card ── */}
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
-          <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
+        <div className="bg-white rounded-4xl border border-slate-100 shadow-sm p-6">
+          <div className="flex flex-col lg:flex-row gap-6 items-start lg:items-center justify-between">
             {/* Search */}
-            <div className="relative w-full md:w-80">
-              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+            <div className="relative w-full lg:max-w-md">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
               <input
                 type="text"
-                placeholder="Search by course or query..."
-                className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-700 placeholder-slate-400 outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-300 transition-all"
+                placeholder="Search queries or courses..."
+                className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold text-slate-700 placeholder-slate-400 outline-none focus:ring-4 focus:ring-indigo-100 focus:bg-white transition-all shadow-inner"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
 
             {/* Filter Tabs */}
-            <div className="flex bg-slate-100 rounded-xl p-1 gap-1 w-full md:w-auto overflow-x-auto">
+            <div className="flex bg-slate-100 rounded-2xl p-1.5 gap-1 w-full lg:w-auto overflow-x-auto scrollbar-hide">
               {FILTER_TABS.map(({ key, icon: Icon }) => (
                 <button
                   key={key}
                   onClick={() => setFilter(key)}
                   className={`
-                    flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-bold whitespace-nowrap transition-all
+                    flex items-center gap-2 px-5 py-3 rounded-xl text-xs font-black uppercase tracking-tight transition-all whitespace-nowrap
                     ${
                       filter === key
-                        ? "bg-white text-indigo-600 shadow-sm"
-                        : "text-slate-500 hover:text-slate-700"
+                        ? "bg-white text-indigo-600 shadow-sm scale-105"
+                        : "text-slate-500 hover:text-slate-900"
                     }
                   `}
                 >
-                  <Icon className="h-3.5 w-3.5" />
+                  <Icon className="h-4 w-4" />
                   {key}
                   <span
-                    className={`ml-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-bold ${
+                    className={`ml-1 px-2 py-0.5 rounded-lg text-[10px] font-black ${
                       filter === key
                         ? "bg-indigo-100 text-indigo-600"
                         : "bg-slate-200 text-slate-500"
@@ -169,168 +182,160 @@ export default function MyQueries() {
         </div>
 
         {/* ── Queries List ── */}
-        {loading ? (
-          <div className="flex items-center justify-center py-24">
-            <div className="text-center">
-              <div className="animate-spin rounded-full h-10 w-10 border-[3px] border-slate-200 border-t-indigo-600 mx-auto mb-4" />
-              <p className="text-slate-400 text-sm font-medium">
-                Loading your queries...
-              </p>
-            </div>
-          </div>
-        ) : filteredQueries.length > 0 ? (
-          <div className="space-y-3">
-            {filteredQueries.map((query) => {
-              const status = query.status || "pending";
-              const cfg = getStatusConfig(status);
-              const resolved = status.toLowerCase() === "resolved";
+        <div className="space-y-4">
+          <AnimatePresence mode="popLayout">
+            {filteredQueries.length > 0 ? (
+              filteredQueries.map((query, i) => {
+                const status = query.status || "pending";
+                const cfg = getStatusConfig(status);
+                const resolved = status.toLowerCase() === "resolved";
 
-              return (
-                <div
-                  key={query._id}
-                  className={`
-                    group relative bg-white rounded-2xl border overflow-hidden
-                    transition-all duration-300
-                    ${
-                      resolved
-                        ? "border-slate-100 opacity-80"
-                        : "border-slate-200 hover:border-indigo-200 hover:shadow-md hover:shadow-indigo-100/40"
-                    }
-                  `}
-                >
-                  {/* Left status bar */}
-                  <div
-                    className={`absolute left-0 top-0 bottom-0 w-1 ${cfg.bar}`}
-                  />
+                return (
+                  <motion.div
+                    layout
+                    key={query._id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.95 }}
+                    transition={{ delay: i * 0.05 }}
+                    className={`
+                      group relative bg-white rounded-3xl border border-slate-100 overflow-hidden
+                      transition-all duration-300
+                      ${
+                        resolved
+                          ? "opacity-80"
+                          : "hover:border-indigo-200 hover:shadow-2xl hover:shadow-indigo-100/40"
+                      }
+                    `}
+                  >
+                    <div
+                      className={`absolute left-0 top-0 bottom-0 w-2 ${cfg.bar}`}
+                    />
 
-                  <div className="pl-5 pr-5 py-5">
-                    <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
-                      {/* Left content */}
-                      <div className="flex-1 min-w-0">
-                        {/* Status + Date + Instructor */}
-                        <div className="flex flex-wrap items-center gap-2.5 mb-3">
-                          <span
-                            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[11px] font-bold uppercase tracking-wide ${cfg.badge}`}
-                          >
+                    <div className="p-6 md:p-8">
+                      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+                        <div className="flex-1 min-w-0">
+                          {/* Header Metadata */}
+                          <div className="flex flex-wrap items-center gap-3 mb-4">
                             <span
-                              className={`h-1.5 w-1.5 rounded-full ${cfg.dot}`}
-                            />
-                            {cfg.label}
-                          </span>
-                          <span className="flex items-center gap-1.5 text-xs text-slate-400 font-medium">
-                            <Clock className="h-3.5 w-3.5" />
-                            {new Date(query.createdAt).toLocaleDateString(
-                              "en-US",
-                              {
-                                month: "short",
-                                day: "numeric",
-                                year: "numeric",
-                              },
+                              className={`inline-flex items-center gap-2 px-3 py-1 rounded-full border text-[10px] font-black uppercase tracking-widest ${cfg.badge}`}
+                            >
+                              <span
+                                className={`h-2 w-2 rounded-full ${cfg.dot} ${status === "pending" ? "animate-pulse" : ""}`}
+                              />
+                              {cfg.label}
+                            </span>
+                            <div className="flex items-center gap-2 text-xs text-slate-400 font-bold uppercase tracking-tight">
+                              <Clock className="h-4 w-4" />
+                              {new Date(query.createdAt).toLocaleDateString(
+                                "en-US",
+                                {
+                                  month: "short",
+                                  day: "numeric",
+                                  year: "numeric",
+                                },
+                              )}
+                            </div>
+                            {query.course && (
+                              <>
+                                <div className="h-1 w-1 bg-slate-300 rounded-full" />
+                                <span className="text-xs text-indigo-600 font-black uppercase tracking-widest">
+                                  {query.course}
+                                </span>
+                              </>
                             )}
-                          </span>
-                          {query.instructor && (
-                            <>
-                              <span className="w-1 h-1 bg-slate-300 rounded-full" />
-                              <span className="text-xs text-slate-400 font-medium">
-                                {query.instructor}
-                              </span>
-                            </>
-                          )}
+                          </div>
+
+                          {/* Query Content */}
+                          <h3 className="text-xl font-black text-slate-900 leading-tight mb-4 group-hover:text-indigo-600 transition-colors">
+                            {typeof query.query === "string"
+                              ? query.query
+                              : "Academic Inquiry"}
+                          </h3>
+
+                          {/* Instructor / Response */}
+                          <div className="flex flex-col sm:flex-row gap-4">
+                            {query.instructor && (
+                              <div className="flex items-center gap-2 text-xs font-bold text-slate-500 bg-slate-50 px-3 py-2 rounded-xl">
+                                <Sparkles className="h-3.5 w-3.5 text-amber-500" />
+                                Instructor: {query.instructor}
+                              </div>
+                            )}
+                            {query.response && (
+                              <div className="flex items-center gap-2 text-xs font-bold text-emerald-600 bg-emerald-50 px-3 py-2 rounded-xl border border-emerald-100">
+                                <CheckCircle className="h-3.5 w-3.5" />
+                                Feedback Received
+                              </div>
+                            )}
+                          </div>
                         </div>
 
-                        {/* Course title */}
-                        {query.course && (
-                          <p className="text-xs font-bold text-indigo-600 uppercase tracking-widest mb-1.5">
-                            {query.course}
-                          </p>
-                        )}
-
-                        {/* Query text */}
-                        <p className="text-slate-800 font-semibold text-base leading-snug mb-3 line-clamp-2 group-hover:text-indigo-600 transition-colors">
-                          {typeof query.query === "string"
-                            ? query.query
-                            : "No query text"}
-                        </p>
-
-                        {/* Response */}
-                        {query.response && (
-                          <div className="flex items-start gap-2.5 bg-indigo-50/50 border border-indigo-100 rounded-xl px-4 py-3">
-                            <MessageSquare className="h-3.5 w-3.5 text-indigo-500 flex-shrink-0 mt-0.5" />
-                            <p className="text-xs text-slate-600 leading-relaxed">
-                              <span className="font-bold text-indigo-700">
-                                Response:{" "}
-                              </span>
-                              {query.response}
-                            </p>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Right: Action button */}
-                      <div className="flex items-center flex-shrink-0 self-center md:self-start mt-1">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            if (!resolved)
-                              router.push(`/dashboard/my-query/${query._id}`);
-                          }}
-                          disabled={resolved}
-                          className={`
-                            flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-all
-                            ${
-                              resolved
-                                ? "bg-slate-50 text-slate-400 border border-slate-200 cursor-not-allowed"
-                                : "bg-indigo-50 text-indigo-600 border border-indigo-100 hover:bg-indigo-600 hover:text-white hover:border-indigo-600 hover:shadow-md hover:shadow-indigo-200 active:scale-95"
+                        {/* Actions */}
+                        <div className="flex items-center lg:justify-end gap-3 pt-4 lg:pt-0 border-t lg:border-t-0 border-slate-50">
+                          <button
+                            onClick={() =>
+                              !resolved &&
+                              router.push(`/dashboard/my-query/${query._id}`)
                             }
-                          `}
-                        >
-                          {resolved ? (
-                            <>
-                              <CheckCircle className="h-4 w-4" />
-                              Resolved
-                            </>
-                          ) : (
-                            <>
-                              Discuss
-                              <ChevronRight className="h-4 w-4" />
-                            </>
-                          )}
-                        </button>
+                            disabled={resolved}
+                            className={`
+                              flex items-center gap-3 px-6 py-4 rounded-2xl text-sm font-black transition-all w-full lg:w-auto justify-center
+                              ${
+                                resolved
+                                  ? "bg-slate-50 text-slate-400 border border-slate-100 cursor-not-allowed"
+                                  : "bg-indigo-600 text-white shadow-lg shadow-indigo-100 hover:bg-indigo-700 hover:-translate-y-1 active:scale-95"
+                              }
+                            `}
+                          >
+                            {resolved ? (
+                              <>
+                                <CheckCircle className="h-5 w-5" />
+                                Resolved
+                              </>
+                            ) : (
+                              <>
+                                View Discussion
+                                <ChevronRight className="h-5 w-5" />
+                              </>
+                            )}
+                          </button>
+                        </div>
                       </div>
                     </div>
-                  </div>
+                  </motion.div>
+                );
+              })
+            ) : (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="bg-white rounded-4xl border border-slate-100 shadow-sm py-24 px-8 text-center"
+              >
+                <div className="w-24 h-24 bg-slate-50 rounded-4xl flex items-center justify-center mx-auto mb-8 border border-slate-100 shadow-inner">
+                  <Inbox className="h-10 w-10 text-slate-300" />
                 </div>
-              );
-            })}
-          </div>
-        ) : (
-          /* Empty state */
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm">
-            <div className="flex flex-col items-center justify-center py-24 px-6">
-              <div className="w-16 h-16 bg-slate-50 rounded-2xl flex items-center justify-center mb-5 border border-slate-100">
-                <Inbox className="h-7 w-7 text-slate-300" />
-              </div>
-              <h3 className="text-base font-bold text-slate-900 mb-1.5">
-                No Queries Found
-              </h3>
-              <p className="text-slate-400 text-sm text-center max-w-xs leading-relaxed mb-6">
-                {searchTerm
-                  ? `No results for "${searchTerm}". Try different keywords.`
-                  : "You haven't submitted any queries yet. Start by creating one."}
-              </p>
-              {!searchTerm && (
-                <Link
-                  href="/dashboard/submit-query"
-                  className="inline-flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-bold transition-all shadow-md shadow-indigo-200"
-                >
-                  <Plus className="h-4 w-4" />
-                  Submit Your First Query
-                </Link>
-              )}
-            </div>
-          </div>
-        )}
+                <h3 className="text-2xl font-black text-slate-900 mb-3">
+                  {searchTerm ? "No results found" : "Discussion board empty"}
+                </h3>
+                <p className="text-slate-400 font-bold uppercase tracking-tight text-sm max-w-xs mx-auto mb-10 leading-relaxed">
+                  {searchTerm
+                    ? `We couldn't find anything matching "${searchTerm}"`
+                    : "You haven't submitted any queries yet. Your academic success starts with a question."}
+                </p>
+                {!searchTerm && (
+                  <Link
+                    href="/dashboard/submit-query"
+                    className="inline-flex items-center gap-3 px-8 py-5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-sm font-black transition-all shadow-2xl shadow-indigo-200 hover:-translate-y-1"
+                  >
+                    <Plus className="h-6 w-6" />
+                    Submit Your First Query
+                  </Link>
+                )}
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
       </div>
-    </div>
+    </motion.div>
   );
 }

@@ -82,7 +82,7 @@ export default function ProfilePage() {
   );
   let logout = async () => {
     let res = await axios.post(
-      `https://stu-portal-backend.vercel.app/api/auth/logout`,
+      `http://localhost:8000/api/auth/logout`,
       {},
       {
         withCredentials: true,

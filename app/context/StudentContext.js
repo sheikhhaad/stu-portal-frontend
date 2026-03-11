@@ -1,42 +1,66 @@
 "use client";
 
 import { createContext, useContext, useState, useEffect } from "react";
-import axios from "axios";
+import { useRouter, usePathname } from "next/navigation";
+import api from "../lib/api";
 
 const StudentContext = createContext();
 
 export function StudentProvider({ children }) {
   const [student, setStudent] = useState(null);
-  const [notifications, setNotifications] = useState([
-    // { id: 1, message: 'Your query #2 status changed to In Progress', read: false },
-    // { id: 2, message: 'New announcement: Midterm results are out', read: true },
-  ]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [notifications, setNotifications] = useState([]);
+  const router = useRouter();
+  const pathname = usePathname();
 
-  // Fetch student info from localStorage
+
   useEffect(() => {
     const fetchStudent = async () => {
       try {
+        setLoading(true);
+        setError(null);
         const storedStudent = localStorage.getItem("rollNumber");
+
         if (storedStudent) {
-          const stuid = JSON.parse(storedStudent);
-          const res = await axios.get(
-            `https://stu-portal-backend.vercel.app/api/auth/student/${stuid}`,
-          );
-          setStudent(res.data.student); // student object with _id
+          try {
+            const stuid = JSON.parse(storedStudent);
+            const res = await api.get(`/auth/student/${stuid}`);
+            setStudent(res.data.student);
+          } catch (e) {
+            console.error("Error parsing stored student or fetching:", e);
+            // If fetching fails, maybe the ID is invalid
+            localStorage.removeItem("rollNumber");
+          }
+        } else if (!pathname.startsWith("/auth")) {
+          // If no student and not on auth page, redirect to login
+          router.push("/auth/login");
         }
-      } catch (error) {
-        console.error("Failed to fetch student:", error);
+      } catch (err) {
+        console.error("Failed to fetch student:", err);
+        setError("Failed to load student profile");
+      } finally {
+        setLoading(false);
       }
     };
-    fetchStudent();
-  }, []);
 
-  // const markNotificationRead = (id) => {
-  //     setNotifications(notifications.map(n => n.id === id ? { ...n, read: true } : n));
-  // };
+    fetchStudent();
+  }, [pathname, router]);
+
+
+
+  let logout = () => {
+    localStorage.removeItem("rollNumber");
+    localStorage.removeItem("studentId");
+    let res = api.post("/auth/logout");
+    setStudent(null);
+    router.push("/auth/login");
+  };
 
   return (
-    <StudentContext.Provider value={{ notifications, student }}>
+    <StudentContext.Provider
+      value={{ notifications, student, loading, error, logout, setStudent }}
+    >
       {children}
     </StudentContext.Provider>
   );

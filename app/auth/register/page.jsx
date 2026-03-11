@@ -30,15 +30,12 @@ export default function Page() {
       alert("Please fill all the fields");
       return;
     }
-    let res = await axios.post(
-      `https://stu-portal-backend.vercel.app/api/auth/register`,
-      {
-        rollNumber: stuId.toUpperCase(),
-        email,
-        password,
-        cnic,
-      },
-    );
+    let res = await axios.post(`http://localhost:8000/api/auth/register`, {
+      rollNumber: stuId.toUpperCase(),
+      email,
+      password,
+      cnic,
+    });
     console.log(res.data);
 
     if (res.status === 200) {

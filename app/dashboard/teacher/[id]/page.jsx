@@ -127,7 +127,7 @@ const TeacherDetail = () => {
     (async () => {
       try {
         const res = await axios.get(
-          `https://stu-portal-backend.vercel.app/api/availability/${id}`,
+          `http://localhost:8000/api/availability/${id}`,
         );
         setSlots(res.data || []);
         console.log(res.data);
@@ -148,7 +148,7 @@ const TeacherDetail = () => {
       try {
         // Fetch once using first slot — backend returns ALL sessions for this student+teacher
         const res = await axios.get(
-          `https://stu-portal-backend.vercel.app/api/session/student/${student._id}`,
+          `http://localhost:8000/api/session/student/${student._id}`,
           { withCredentials: true },
         );
 
@@ -189,7 +189,7 @@ const TeacherDetail = () => {
         `${slot.date}T${blockStartTime}`,
       ).toISOString();
       const res = await axios.put(
-        `https://stu-portal-backend.vercel.app/api/session/book/${slotId}`,
+        `http://localhost:8000/api/session/book/${slotId}`,
         {
           student_id: student._id,
           teacher_id: id,

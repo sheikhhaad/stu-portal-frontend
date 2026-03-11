@@ -7,8 +7,8 @@ import {
   useEffect,
   useCallback,
 } from "react";
-import axios from "axios";
 import { useStudent } from "./StudentContext";
+import api from "../lib/api";
 
 const QueryContext = createContext();
 
@@ -16,6 +16,7 @@ export function QueryProvider({ children }) {
   const { student } = useStudent();
   const [queries, setQueries] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
   // Fetch all queries of logged student
   const fetchAllQueries = useCallback(async () => {
@@ -23,20 +24,17 @@ export function QueryProvider({ children }) {
 
     try {
       setLoading(true);
+      setError(null);
 
-      const res = await axios.get(
-        `https://stu-portal-backend.vercel.app/api/queries/all`,
-        {
-          withCredentials: true,
-        },
-      );
+      const res = await api.get(`/queries/all`);
 
       const fetchedQueries = Array.isArray(res.data)
         ? res.data
         : res.data.queries || [];
       setQueries(fetchedQueries);
-    } catch (error) {
-      console.error("Fetch all queries failed:", error);
+    } catch (err) {
+      console.error("Fetch all queries failed:", err);
+      setError("Failed to load queries");
       setQueries([]);
     } finally {
       setLoading(false);
@@ -49,14 +47,11 @@ export function QueryProvider({ children }) {
       if (!student?._id || !courseId) return [];
 
       try {
-        const res = await axios.get(
-          `https://stu-portal-backend.vercel.app/api/queries/${student._id}/course/${courseId}`,
-          { withCredentials: true },
-        );
+        const res = await api.get(`/queries/${student._id}/course/${courseId}`);
 
         return Array.isArray(res.data) ? res.data : res.data.queries || [];
-      } catch (error) {
-        console.error("Fetch course queries failed:", error);
+      } catch (err) {
+        console.error("Fetch course queries failed:", err);
         return [];
       }
     },
@@ -68,7 +63,7 @@ export function QueryProvider({ children }) {
     setQueries((prev) => [newQuery, ...prev]);
   };
 
-  // Update single query in state
+  // Update single query in list
   const updateQueryInList = (updatedQuery) => {
     setQueries((prev) =>
       prev.map((q) => (q._id === updatedQuery._id ? updatedQuery : q)),
@@ -88,6 +83,7 @@ export function QueryProvider({ children }) {
       value={{
         queries,
         loading,
+        error,
         fetchAllQueries,
         fetchCourseQueries,
         addQuery,
