@@ -65,11 +65,10 @@ export default function Navbar() {
                 <Link
                   key={link.href}
                   href={link.href}
-                  className={`relative px-4 py-2 rounded-xl text-sm font-bold transition-all duration-300 ${
-                    isActive(link.href)
+                  className={`relative px-4 py-2 rounded-xl text-sm font-bold transition-all duration-300 ${isActive(link.href)
                       ? "text-indigo-600 bg-indigo-50/50"
                       : "text-gray-500 hover:text-gray-900 hover:bg-gray-50"
-                  }`}
+                    }`}
                 >
                   {link.label}
                   {isActive(link.href) && (
@@ -185,11 +184,10 @@ export default function Navbar() {
                   key={link.href}
                   href={link.href}
                   onClick={() => setIsMenuOpen(false)}
-                  className={`flex items-center gap-4 px-5 py-4 rounded-2xl font-bold transition-all ${
-                    isActive(link.href)
+                  className={`flex items-center gap-4 px-5 py-4 rounded-2xl font-bold transition-all ${isActive(link.href)
                       ? "bg-indigo-50 text-indigo-600"
                       : "text-gray-500 hover:bg-gray-50"
-                  }`}
+                    }`}
                 >
                   {link.label}
                 </Link>

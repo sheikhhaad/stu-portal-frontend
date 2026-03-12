@@ -86,7 +86,7 @@ export default function CourseDetailPage() {
       try {
         const res = await api.get(`/announcements/${teacher._id}/course/${id}`);
         setTeacherAnnouncements(Array.isArray(res.data) ? res.data : []);
-      } catch {}
+      } catch { }
     })();
   }, [teacher]);
 
@@ -119,7 +119,7 @@ export default function CourseDetailPage() {
           withCredentials: true,
         });
         setTeacher(res.data.teacher);
-      } catch {}
+      } catch { }
     })();
   }, [student, id]);
 
@@ -348,40 +348,6 @@ export default function CourseDetailPage() {
                 ))}
               </div>
             </div>
-
-            {/* Announcements */}
-            <div className="bg-white rounded-2xl border border-gray-100 p-5">
-              <div className="flex items-center gap-2 mb-4">
-                <Bell className="h-3.5 w-3.5 text-gray-400" />
-                <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">
-                  Announcements
-                </p>
-              </div>
-              {teacherAnnouncements.length > 0 ? (
-                <div className="space-y-3">
-                  {teacherAnnouncements.map((ann, idx) => (
-                    <div
-                      key={ann._id || idx}
-                      className="border-l-2 border-gray-200 pl-3 py-0.5"
-                    >
-                      <p className="text-sm text-gray-700 leading-relaxed">
-                        {ann.text}
-                      </p>
-                      <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wider mt-1">
-                        {new Date(ann.createdAt).toLocaleDateString("en-US", {
-                          month: "short",
-                          day: "numeric",
-                        })}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-xs text-gray-400 italic">
-                  No recent announcements.
-                </p>
-              )}
-            </div>
           </aside>
 
           {/* ── Queries Panel ── */}
@@ -428,11 +394,10 @@ export default function CourseDetailPage() {
                           initial={{ opacity: 0, y: 6 }}
                           animate={{ opacity: 1, y: 0 }}
                           transition={{ delay: idx * 0.04, duration: 0.2 }}
-                          className={`border rounded-xl overflow-hidden transition-all ${
-                            isExpanded
-                              ? "border-gray-300"
-                              : "border-gray-100 hover:border-gray-200"
-                          }`}
+                          className={`border rounded-xl overflow-hidden transition-all ${isExpanded
+                            ? "border-gray-300"
+                            : "border-gray-100 hover:border-gray-200"
+                            }`}
                         >
                           {/* Query row */}
                           <div
