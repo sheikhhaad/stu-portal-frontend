@@ -133,7 +133,7 @@ const QueryDetail = () => {
   if (loading && queries.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh]">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
         <p className="mt-4 text-gray-500 font-medium">
           Loading query details...
         </p>
@@ -150,7 +150,7 @@ const QueryDetail = () => {
         </p>
         <button
           onClick={() => router.back()}
-          className="text-indigo-600 hover:underline mt-6 inline-flex items-center font-medium"
+          className="text-blue-600 hover:underline mt-6 inline-flex items-center font-medium"
         >
           <ChevronLeft className="h-4 w-4 mr-1" />
           Back to All Queries
@@ -177,7 +177,7 @@ const QueryDetail = () => {
       {/* Back Navigation */}
       <button
         onClick={() => router.back()}
-        className="inline-flex items-center text-gray-600 hover:text-indigo-600 mb-6 transition-colors"
+        className="inline-flex items-center text-gray-600 hover:text-blue-600 mb-6 transition-colors"
       >
         <ChevronLeft className="h-5 w-5 mr-1" />
         Back to Queries
@@ -208,9 +208,9 @@ const QueryDetail = () => {
               </span>
             </div>
           </div>
-          <div className="mt-4 md:mt-0 flex items-center gap-2 bg-indigo-50 px-4 py-2 rounded-lg">
-            <GraduationCap className="h-5 w-5 text-indigo-600" />
-            <span className="text-sm font-medium text-indigo-700">
+          <div className="mt-4 md:mt-0 flex items-center gap-2 bg-blue-50 px-4 py-2 rounded-lg">
+            <GraduationCap className="h-5 w-5 text-blue-600" />
+            <span className="text-sm font-medium text-blue-700">
               Instructor: {query.instructor}
             </span>
           </div>
@@ -225,7 +225,7 @@ const QueryDetail = () => {
 
       {/* Chat Section */}
       <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
-        <div className="p-6 border-b border-gray-100 bg-gradient-to-r from-indigo-50 to-white">
+        <div className="p-6 border-b border-gray-100 bg-linear-to-r from-blue-50 to-white">
           <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
             <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
             Discussion
@@ -236,7 +236,7 @@ const QueryDetail = () => {
         <div className="p-6 space-y-6 max-h-[500px] overflow-y-auto bg-gray-50/50">
           {fetchingMessages ? (
             <div className="flex justify-center py-12">
-              <div className="animate-spin rounded-full h-8 w-8 border-3 border-indigo-200 border-t-indigo-600"></div>
+              <div className="animate-spin rounded-full h-8 w-8 border-3 border-blue-200 border-t-blue-600"></div>
             </div>
           ) : messages.length > 0 ? (
             <>
@@ -257,12 +257,12 @@ const QueryDetail = () => {
                       {/* Avatar - Only show for first message in a sequence from same sender */}
                       {showAvatar ? (
                         <div
-                          className={`flex-shrink-0 ${isStudent ? "ml-3" : "mr-3"}`}
+                          className={`shrink-0 ${isStudent ? "ml-3" : "mr-3"}`}
                         >
                           <div
                             className={`h-10 w-10 rounded-full flex items-center justify-center text-sm font-semibold shadow-md ${
                               isStudent
-                                ? "bg-indigo-600 text-white"
+                                ? "bg-blue-600 text-white"
                                 : "bg-gray-700 text-white"
                             }`}
                           >
@@ -271,7 +271,7 @@ const QueryDetail = () => {
                         </div>
                       ) : (
                         <div
-                          className={`flex-shrink-0 ${isStudent ? "ml-3" : "mr-3"} w-10`}
+                          className={`shrink-0 ${isStudent ? "ml-3" : "mr-3"} w-10`}
                         />
                       )}
 
@@ -284,7 +284,7 @@ const QueryDetail = () => {
                           >
                             <span
                               className={
-                                isStudent ? "text-indigo-600" : "text-gray-700"
+                                isStudent ? "text-blue-600" : "text-gray-700"
                               }
                             >
                               {msg.sender}
@@ -300,7 +300,7 @@ const QueryDetail = () => {
                         <div
                           className={`rounded-2xl p-4 shadow-sm ${
                             isStudent
-                              ? "bg-indigo-600 text-white rounded-tr-none"
+                              ? "bg-blue-600 text-white rounded-tr-none"
                               : "bg-white text-gray-800 rounded-tl-none border border-gray-200"
                           }`}
                         >
@@ -317,7 +317,7 @@ const QueryDetail = () => {
             </>
           ) : (
             <div className="text-center py-12">
-              <div className="w-16 h-16 bg-indigo-50 rounded-full flex items-center justify-center mx-auto mb-4">
+              <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-4">
                 <MessageSquare className="h-8 w-8 text-indigo-400" />
               </div>
               <p className="text-gray-500 font-medium">No messages yet</p>
@@ -339,12 +339,12 @@ const QueryDetail = () => {
                   onKeyDown={handleKeyDown}
                   placeholder="Type your message..."
                   rows="1"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none pr-12 transition-all"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none pr-12 transition-all"
                   style={{ minHeight: "52px", maxHeight: "120px" }}
                 />
                 <button
                   type="button"
-                  className="absolute right-3 bottom-3 text-gray-400 hover:text-indigo-600 transition-colors"
+                  className="absolute right-3 bottom-3 text-gray-400 hover:text-blue-600 transition-colors"
                   title="Attach file"
                 >
                   <Paperclip className="h-5 w-5" />
@@ -353,7 +353,7 @@ const QueryDetail = () => {
               <button
                 type="submit"
                 disabled={!message.trim() || sending}
-                className={`p-3 rounded-xl bg-indigo-600 text-white hover:bg-indigo-700 transition-all shadow-md ${
+                className={`p-3 rounded-xl bg-blue-600 text-white hover:bg-blue-700 transition-all shadow-md ${
                   !message.trim() || sending
                     ? "opacity-50 cursor-not-allowed"
                     : "hover:shadow-lg transform hover:-translate-y-0.5"

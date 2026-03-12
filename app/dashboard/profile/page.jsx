@@ -72,7 +72,7 @@ export default function ProfilePage() {
       onClick={() => setActiveTab(id)}
       className={`flex items-center px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${
         activeTab === id
-          ? "bg-indigo-50 text-indigo-700 shadow-sm"
+          ? "bg-blue-50 text-blue-700 shadow-sm"
           : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
       }`}
     >
@@ -121,7 +121,7 @@ export default function ProfilePage() {
       {/* Profile Header Card */}
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
         {/* Cover Photo */}
-        <div className="h-32 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 relative">
+        <div className="h-32 bg-linear-to-r from-blue-600 via-sky-400 to-blue-500 relative">
           <button className="absolute bottom-4 right-4 bg-white/90 backdrop-blur-sm p-2 rounded-lg shadow-lg hover:bg-white transition-colors">
             <Camera className="h-4 w-4 text-gray-700" />
           </button>
@@ -139,7 +139,7 @@ export default function ProfilePage() {
                   className="h-full w-full object-cover"
                 />
               </div>
-              <button className="absolute -bottom-2 -right-2 bg-indigo-600 text-white p-1.5 rounded-lg shadow-lg hover:bg-indigo-700 transition-colors">
+              <button className="absolute -bottom-2 -right-2 bg-blue-600 text-white p-1.5 rounded-lg shadow-lg hover:bg-blue-700 transition-colors">
                 <Camera className="h-3 w-3" />
               </button>
             </div>
@@ -158,7 +158,7 @@ export default function ProfilePage() {
                 </div>
                 <button
                   onClick={() => setIsEditingProfile(true)}
-                  className="mt-4 md:mt-0 inline-flex items-center px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-sm font-medium"
+                  className="mt-4 md:mt-0 inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
                 >
                   <Edit2 className="h-4 w-4 mr-2" />
                   Edit Profile
@@ -187,7 +187,7 @@ export default function ProfilePage() {
               {!isEditingProfile && (
                 <button
                   onClick={() => setIsEditingProfile(true)}
-                  className="text-indigo-600 hover:text-indigo-800 text-sm font-medium flex items-center"
+                  className="text-blue-600 hover:text-blue-800 text-sm font-medium flex items-center"
                 >
                   <Edit2 className="h-4 w-4 mr-1" />
                   Edit
@@ -208,7 +208,7 @@ export default function ProfilePage() {
                       name="name"
                       value={profileForm.name}
                       onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
                   <div>
@@ -220,7 +220,7 @@ export default function ProfilePage() {
                       name="email"
                       value={profileForm.email}
                       onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
                   <div>
@@ -232,7 +232,7 @@ export default function ProfilePage() {
                       name="phone"
                       value={profileForm.phone}
                       onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
                   <div>
@@ -244,7 +244,7 @@ export default function ProfilePage() {
                       name="dateOfBirth"
                       value={profileForm.dateOfBirth}
                       onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
                   <div className="md:col-span-2">
@@ -256,7 +256,7 @@ export default function ProfilePage() {
                       name="address"
                       value={profileForm.address}
                       onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
                   <div className="md:col-span-2">
@@ -268,7 +268,7 @@ export default function ProfilePage() {
                       rows="3"
                       value={profileForm.bio}
                       onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
                 </div>
@@ -276,7 +276,7 @@ export default function ProfilePage() {
                 <div className="flex items-center space-x-3 pt-4">
                   <button
                     onClick={handleSaveProfile}
-                    className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-sm font-medium flex items-center"
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium flex items-center"
                   >
                     <Save className="h-4 w-4 mr-2" />
                     Save Changes
@@ -396,7 +396,7 @@ export default function ProfilePage() {
               {/* Notification Settings */}
               <div className="border border-gray-200 rounded-lg p-4">
                 <h4 className="font-medium text-gray-900 flex items-center mb-4">
-                  <Bell className="h-5 w-5 mr-2 text-indigo-600" />
+                  <Bell className="h-5 w-5 mr-2 text-blue-600" />
                   Notification Preferences
                 </h4>
                 <div className="space-y-3">
@@ -417,7 +417,7 @@ export default function ProfilePage() {
                           className="sr-only peer"
                           defaultChecked={index < 2}
                         />
-                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                       </label>
                     </div>
                   ))}
@@ -427,11 +427,11 @@ export default function ProfilePage() {
               {/* Appearance */}
               <div className="border border-gray-200 rounded-lg p-4">
                 <h4 className="font-medium text-gray-900 flex items-center mb-4">
-                  <Moon className="h-5 w-5 mr-2 text-indigo-600" />
+                  <Moon className="h-5 w-5 mr-2 text-blue-600" />
                   Appearance
                 </h4>
                 <div className="flex items-center space-x-4">
-                  <button className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm">
+                  <button className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm">
                     Light
                   </button>
                   <button className="px-4 py-2 border border-gray-200 text-gray-700 rounded-lg text-sm hover:bg-gray-50">

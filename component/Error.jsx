@@ -2,31 +2,45 @@
 
 import React from "react";
 import { motion } from "framer-motion";
-import { AlertCircle, RefreshCcw } from "lucide-react";
+import { AlertCircle, RefreshCcw, ArrowLeft } from "lucide-react";
+import Link from "next/link";
 
 const Error = ({ message = "An error occurred", onRetry }) => {
   return (
     <motion.div
-      initial={{ opacity: 0, scale: 0.95 }}
+      initial={{ opacity: 0, scale: 0.98 }}
       animate={{ opacity: 1, scale: 1 }}
-      className="flex flex-col items-center justify-center min-h-[300px] w-full p-8 text-center"
+      className="flex flex-col items-center justify-center min-h-[400px] w-full p-8 text-center"
     >
-      <div className="bg-red-50 p-6 rounded-2xl border border-red-100 shadow-sm max-w-md w-full">
-        <div className="bg-red-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-          <AlertCircle className="w-8 h-8 text-red-600" />
+      <div className="max-w-sm w-full">
+        <div className="w-16 h-16 bg-sky-50 border border-sky-100 rounded-4xl flex items-center justify-center mx-auto mb-6 shadow-inner">
+          <AlertCircle className="w-8 h-8 text-blue-600" />
         </div>
-        <h3 className="text-xl font-bold text-gray-900 mb-2">Oops!</h3>
-        <p className="text-gray-600 mb-6">{message}</p>
+        
+        <h3 className="text-xl font-black text-blue-900 mb-2 tracking-tight uppercase">System Interruption</h3>
+        <p className="text-blue-400 text-sm mb-8 leading-relaxed font-medium">
+          {message}
+        </p>
 
-        {onRetry && (
-          <button
-            onClick={onRetry}
-            className="flex items-center justify-center gap-2 w-full bg-red-600 hover:bg-red-700 text-white py-3 rounded-xl font-semibold transition-all shadow-lg shadow-red-200 active:scale-95"
+        <div className="space-y-3">
+          {onRetry && (
+            <button
+              onClick={onRetry}
+              className="flex items-center justify-center gap-2 w-full bg-blue-600 hover:bg-blue-700 text-white py-4 rounded-2xl font-black text-xs uppercase tracking-widest transition-all active:scale-[0.98] shadow-xl shadow-blue-100"
+            >
+              <RefreshCcw className="w-3.5 h-3.5" />
+              Attempt Recover
+            </button>
+          )}
+          
+          <Link
+            href="/dashboard"
+            className="flex items-center justify-center gap-2 w-full bg-white border border-sky-100 text-sky-400 hover:text-blue-600 py-4 rounded-2xl font-black text-xs uppercase tracking-widest transition-all"
           >
-            <RefreshCcw className="w-4 h-4" />
-            Try Again
-          </button>
-        )}
+            <ArrowLeft className="w-3.5 h-3.5" />
+            Return Home
+          </Link>
+        </div>
       </div>
     </motion.div>
   );

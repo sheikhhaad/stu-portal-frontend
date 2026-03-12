@@ -1,15 +1,11 @@
 "use client";
-import {
-  BookOpen,
-  GraduationCap,
-  Sparkles,
-  TrendingUp,
-  Clock,
-  CheckCircle,
-  ChevronRight,
-} from "lucide-react";
+import { GraduationCap } from "lucide-react";
 import { useStudent } from "@/app/context/StudentContext";
+import { useQueries } from "@/app/context/QueryContext";
 import CourseCard from "@/component/CourseCard";
+import StatsCard from "@/component/StatsCard";
+import Sidebar from "@/component/Sidebar";
+import DashboardHeader from "@/component/DashboardHeader";
 import { useEffect, useState } from "react";
 import api from "@/app/lib/api";
 import Loading from "@/component/Loading";
@@ -18,9 +14,11 @@ import { motion } from "framer-motion";
 
 export default function Dashboard() {
   const { student } = useStudent();
+  const { queries } = useQueries();
   const [enrolledCourses, setEnrolledCourses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const fetchEnrolledCourses = async () => {
     if (!student) return;
@@ -30,7 +28,6 @@ export default function Dashboard() {
       const res = await api.get(`/enrollments/student/${student._id}`);
       setEnrolledCourses(res.data.courses || []);
     } catch (err) {
-      console.error("Error fetching enrolled courses", err);
       setError("Failed to load your courses. Please try again.");
     } finally {
       setLoading(false);
@@ -41,154 +38,105 @@ export default function Dashboard() {
     fetchEnrolledCourses();
   }, [student]);
 
-  const getGreeting = () => {
-    const h = new Date().getHours();
-    if (h < 12) return "Good morning";
-    if (h < 17) return "Good afternoon";
-    return "Good evening";
-  };
-
   if (loading) return <Loading message="Preparing your dashboard..." />;
   if (error) return <Error message={error} onRetry={fetchEnrolledCourses} />;
 
+  const firstName = student?.name?.split(" ")[0] || "Student";
+
   return (
     <motion.div
-      initial={{ opacity: 0, y: 10 }}
+      initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
-      className="min-h-screen bg-slate-50/50"
+      transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+      className="max-w-6xl mx-auto space-y-8"
     >
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
-        {/* ── Hero Welcome Card ── */}
-        <div className="relative rounded-4xl overflow-hidden shadow-2xl shadow-indigo-100/50 group">
-          <div className="absolute inset-0 bg-linear-to-br from-indigo-600 via-indigo-700 to-purple-800" />
-          <div className="absolute -top-16 -right-16 w-72 h-72 bg-white/10 rounded-full blur-3xl pointer-events-none group-hover:scale-110 transition-transform duration-700" />
-          <div className="absolute bottom-0 right-24 w-40 h-40 bg-purple-400/20 rounded-full blur-2xl pointer-events-none" />
+      {/* Welcome banner */}
+      <div className="relative rounded-3xl overflow-hidden bg-blue-600 border border-blue-500 shadow-2xl">
+        {/* Decorative elements */}
+        <div className="absolute inset-0 opacity-[0.05]"
+          style={{
+            backgroundImage: "linear-gradient(#fff 1px, transparent 1px), linear-gradient(90deg, #fff 1px, transparent 1px)",
+            backgroundSize: "32px 32px",
+          }}
+        />
+        <div className="absolute top-0 right-0 w-96 h-96 bg-sky-300/30 rounded-full blur-[100px] -mr-48 -mt-48" />
+        <div className="absolute bottom-0 left-0 w-64 h-64 bg-white/10 rounded-full blur-[80px] -ml-32 -mb-32" />
 
-          <div className="relative z-10 px-8 py-12 md:py-16 flex flex-col md:flex-row md:items-center justify-between gap-8">
-            <div className="max-w-xl">
-              <motion.div
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                className="inline-flex items-center gap-2 px-4 py-2 bg-white/15 backdrop-blur-md border border-white/25 rounded-full mb-6"
-              >
-                <Sparkles className="h-4 w-4 text-yellow-300" />
-                <span className="text-xs font-black text-white uppercase tracking-widest">
-                  {getGreeting()}
-                </span>
-              </motion.div>
-
-              <h1 className="text-4xl md:text-5xl font-black text-white tracking-tight leading-tight mb-4">
-                {student?.name?.split(" ")[0] || "Student"} 👋
-              </h1>
-              <p className="text-indigo-100/90 text-lg font-medium max-w-md leading-relaxed">
-                Your central hub for academic success. Manage courses, track
-                queries, and collaborate with ease.
-              </p>
+        <div className="relative px-8 py-10 flex flex-col md:flex-row md:items-center justify-between gap-8">
+          <div className="space-y-3">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-sky-400/10 border border-sky-400/20">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-sky-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-sky-400"></span>
+              </span>
+              <span className="text-[10px] font-bold text-sky-400 uppercase tracking-widest">Live Academic Status</span>
             </div>
-
-            <div className="flex gap-4">
-              <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-3xl p-6 text-center min-w-[120px] shadow-lg">
-                <p className="text-4xl font-black text-white">
-                  {enrolledCourses.length}
-                </p>
-                <p className="text-xs text-indigo-200 font-bold uppercase tracking-wider mt-2">
-                  Courses
-                </p>
-              </div>
-              <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-3xl p-6 text-center min-w-[120px] shadow-lg">
-                <p className="text-4xl font-black text-white">0</p>
-                <p className="text-xs text-indigo-200 font-bold uppercase tracking-wider mt-2">
-                  Active
-                </p>
-              </div>
-            </div>
+            <h2 className="text-3xl font-extrabold text-white tracking-tight leading-tight">
+              Welcome back, <span className="text-transparent bg-clip-text bg-linear-to-r from-sky-400 to-blue-100">{firstName}</span>
+            </h2>
+            <p className="text-gray-400 max-w-md text-sm leading-relaxed">
+              You have <span className="text-white font-semibold">{enrolledCourses.length} active courses</span> and 
+              a resolution rate of <span className="text-white font-semibold font-mono tracking-tighter">
+                {queries.length > 0 ? Math.round((queries.filter(q => q.status === "resolved").length / queries.length) * 100) : 0}%
+              </span> on your queries.
+            </p>
           </div>
-        </div>
-
-        {/* ── Quick Stats ── */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {[
-            {
-              icon: BookOpen,
-              label: "Enrolled",
-              value: enrolledCourses.length,
-              color: "indigo",
-            },
-            {
-              icon: TrendingUp,
-              label: "Active Sessions",
-              value: 0,
-              color: "emerald",
-            },
-            { icon: Clock, label: "Pending", value: 0, color: "amber" },
-            { icon: CheckCircle, label: "Resolved", value: 0, color: "blue" },
-          ].map((stat, i) => (
-            <motion.div
-              key={stat.label}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.1 }}
-              className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm hover:shadow-xl hover:shadow-indigo-100/30 transition-all duration-300 group cursor-pointer"
-            >
-              <div className="flex items-center justify-between mb-4">
-                <div
-                  className={`w-12 h-12 bg-${stat.color}-50 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform`}
-                >
-                  <stat.icon className={`h-6 w-6 text-${stat.color}-600`} />
-                </div>
-                <ChevronRight className="h-5 w-5 text-slate-300 group-hover:text-slate-900 transition-colors" />
-              </div>
-              <p className="text-3xl font-black text-slate-900 mb-1">
-                {stat.value}
-              </p>
-              <p className="text-sm text-slate-400 font-bold uppercase tracking-tight">
-                {stat.label}
-              </p>
-            </motion.div>
-          ))}
-        </div>
-
-        {/* ── Courses Section ── */}
-        <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden mb-12">
-          <div className="flex items-center justify-between px-8 py-6 border-b border-slate-50">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-indigo-50 rounded-2xl flex items-center justify-center">
-                <BookOpen className="h-6 w-6 text-indigo-600" />
-              </div>
-              <div>
-                <h2 className="text-xl font-black text-slate-900">
-                  Enrolled Courses
-                </h2>
-                <p className="text-sm text-slate-400 font-bold">
-                  {enrolledCourses.length} active enrollments
-                </p>
-              </div>
+          
+          <div className="flex gap-4">
+            <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-5 text-center min-w-[110px] transition-transform hover:scale-[1.02]">
+              <p className="text-3xl font-black text-white tabular-nums">{enrolledCourses.length}</p>
+              <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1">Courses</p>
             </div>
-          </div>
-
-          <div className="p-8">
-            {enrolledCourses.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-16">
-                <div className="w-20 h-20 bg-slate-50 rounded-3xl flex items-center justify-center mb-6 border border-slate-100">
-                  <GraduationCap className="h-10 w-10 text-slate-300" />
-                </div>
-                <h3 className="text-xl font-black text-slate-900 mb-2">
-                  No Courses Enrolled
-                </h3>
-                <p className="text-slate-400 font-bold text-center max-w-xs uppercase tracking-tight">
-                  Stay tuned for upcoming courses
-                </p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {enrolledCourses.map((course) => (
-                  <CourseCard key={course._id} course={course} />
-                ))}
-              </div>
-            )}
+            <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-5 text-center min-w-[110px] transition-transform hover:scale-[1.02] border-l-blue-500/50">
+              <p className="text-3xl font-black text-white tabular-nums">{queries.filter(q => q.status === "pending").length}</p>
+              <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1">Pending</p>
+            </div>
           </div>
         </div>
       </div>
+
+      {/* Quick Stats */}
+      <StatsCard queries={queries} />
+
+      {/* Courses section */}
+      <div className="space-y-6">
+        <div className="flex items-end justify-between border-b border-gray-100 pb-4">
+          <div>
+            <h3 className="text-xl font-bold text-gray-900 tracking-tight">Active Enrollments</h3>
+            <p className="text-xs text-gray-400 font-medium mt-1 uppercase tracking-wider">
+              {enrolledCourses.length} Registered Courses
+            </p>
+          </div>
+          <button className="text-xs font-bold text-blue-600 hover:text-blue-700 transition-colors uppercase tracking-widest">
+            View All
+          </button>
+        </div>
+
+        {enrolledCourses.length === 0 ? (
+          <div className="bg-white rounded-3xl border border-dashed border-gray-200 flex flex-col items-center justify-center py-24 text-center">
+            <div className="w-20 h-20 bg-gray-50 rounded-3xl flex items-center justify-center mb-6 border border-gray-100 shadow-inner">
+              <GraduationCap className="w-10 h-10 text-gray-200" />
+            </div>
+            <h4 className="text-lg font-bold text-gray-900 mb-2 mt-2">No courses enrolled yet</h4>
+            <p className="text-sm text-gray-400 max-w-sm mx-auto">
+              Stay tuned! Your courses will appear here once the administration processes your enrollment.
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+            {enrolledCourses.map((course, i) => (
+              <motion.div
+                key={course._id}
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: i * 0.1, duration: 0.4 }}
+              >
+                <CourseCard course={course} />
+              </motion.div>
+            ))}
+          </div>
+        )}
+      </div>
     </motion.div>
   );
-}
+}

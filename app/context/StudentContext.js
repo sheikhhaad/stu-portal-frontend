@@ -14,44 +14,24 @@ export function StudentProvider({ children }) {
   const router = useRouter();
   const pathname = usePathname();
 
-
   useEffect(() => {
     const fetchStudent = async () => {
       try {
-        setLoading(true);
-        setError(null);
-        const storedStudent = localStorage.getItem("rollNumber");
-
-        if (storedStudent) {
-          try {
-            const stuid = JSON.parse(storedStudent);
-            const res = await api.get(`/auth/student/${stuid}`);
-            setStudent(res.data.student);
-          } catch (e) {
-            console.error("Error parsing stored student or fetching:", e);
-            // If fetching fails, maybe the ID is invalid
-            localStorage.removeItem("rollNumber");
-          }
-        } else if (!pathname.startsWith("/auth")) {
-          // If no student and not on auth page, redirect to login
-          router.push("/auth/login");
+        if (pathname.startsWith("/auth")) {
+          setLoading(false);
+          return;
         }
+        const res = await api.get("/auth/student/me");
+        console.log(res.data);
+        setStudent(res.data.student);
       } catch (err) {
-        console.error("Failed to fetch student:", err);
-        setError("Failed to load student profile");
-      } finally {
-        setLoading(false);
+        router.push("/auth/login");
       }
     };
 
     fetchStudent();
-  }, [pathname, router]);
-
-
-
+  }, []);
   let logout = () => {
-    localStorage.removeItem("rollNumber");
-    localStorage.removeItem("studentId");
     let res = api.post("/auth/logout");
     setStudent(null);
     router.push("/auth/login");
