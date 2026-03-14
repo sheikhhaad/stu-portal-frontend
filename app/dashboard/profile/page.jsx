@@ -29,6 +29,7 @@ import {
 import { useStudent } from "@/app/context/StudentContext";
 import axios from "axios";
 import { useRouter } from "next/navigation";
+import api from "@/app/lib/api";
 
 export default function ProfilePage() {
   const { student, notifications } = useStudent();
@@ -70,29 +71,25 @@ export default function ProfilePage() {
   const TabButton = ({ id, label, icon: Icon }) => (
     <button
       onClick={() => setActiveTab(id)}
-      className={`flex items-center px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${
-        activeTab === id
+      className={`flex items-center px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${activeTab === id
           ? "bg-blue-50 text-blue-700 shadow-sm"
           : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
-      }`}
+        }`}
     >
       <Icon className="h-4 w-4 mr-2" />
       {label}
     </button>
   );
   let logout = async () => {
-    let res = await axios.post(
-      `http://localhost:8000/api/auth/logout`,
+    let res = await api.post(
+      `/auth/logout`,
       {},
       {
         withCredentials: true,
       },
     );
 
-    localStorage.removeItem("rollNumber");
-    localStorage.removeItem("studentId");
 
-    console.log(res);
 
     if (res.status === 200) {
       router.push("/");
