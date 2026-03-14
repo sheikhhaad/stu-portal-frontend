@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { useStudent } from "@/app/context/StudentContext";
 import axios from "axios";
+import api from "@/app/lib/api";
 
 const QueryDetail = () => {
   const { id } = useParams();
@@ -46,8 +47,8 @@ const QueryDetail = () => {
 
     setFetchingMessages(true);
     try {
-      const res = await axios.get(
-        `http://localhost:8000/api/messages/${query._id}`,
+      const res = await api.get(
+        `messages/${query._id}`,
         { withCredentials: true },
       );
 
@@ -93,7 +94,7 @@ const QueryDetail = () => {
 
     setSending(true);
     try {
-      const res = await axios.post(`http://localhost:8000/api/messages/send`, {
+      const res = await api.post(`/messages/send`, {
         query_id: id,
         sender_id: student._id,
         sender_role: "student",
@@ -260,11 +261,10 @@ const QueryDetail = () => {
                           className={`shrink-0 ${isStudent ? "ml-3" : "mr-3"}`}
                         >
                           <div
-                            className={`h-10 w-10 rounded-full flex items-center justify-center text-sm font-semibold shadow-md ${
-                              isStudent
+                            className={`h-10 w-10 rounded-full flex items-center justify-center text-sm font-semibold shadow-md ${isStudent
                                 ? "bg-blue-600 text-white"
                                 : "bg-gray-700 text-white"
-                            }`}
+                              }`}
                           >
                             {msg.avatar}
                           </div>
@@ -298,11 +298,10 @@ const QueryDetail = () => {
 
                         {/* Message Bubble */}
                         <div
-                          className={`rounded-2xl p-4 shadow-sm ${
-                            isStudent
+                          className={`rounded-2xl p-4 shadow-sm ${isStudent
                               ? "bg-blue-600 text-white rounded-tr-none"
                               : "bg-white text-gray-800 rounded-tl-none border border-gray-200"
-                          }`}
+                            }`}
                         >
                           <p className="text-sm leading-relaxed whitespace-pre-wrap">
                             {msg.content}
@@ -353,11 +352,10 @@ const QueryDetail = () => {
               <button
                 type="submit"
                 disabled={!message.trim() || sending}
-                className={`p-3 rounded-xl bg-blue-600 text-white hover:bg-blue-700 transition-all shadow-md ${
-                  !message.trim() || sending
+                className={`p-3 rounded-xl bg-blue-600 text-white hover:bg-blue-700 transition-all shadow-md ${!message.trim() || sending
                     ? "opacity-50 cursor-not-allowed"
                     : "hover:shadow-lg transform hover:-translate-y-0.5"
-                }`}
+                  }`}
                 title="Send message"
               >
                 {sending ? (
