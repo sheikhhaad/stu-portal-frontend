@@ -1,11 +1,7 @@
 "use client";
 import { GraduationCap } from "lucide-react";
 import { useStudent } from "@/app/context/StudentContext";
-import { useQueries } from "@/app/context/QueryContext";
 import CourseCard from "@/component/CourseCard";
-import StatsCard from "@/component/StatsCard";
-import Sidebar from "@/component/Sidebar";
-import DashboardHeader from "@/component/DashboardHeader";
 import { useEffect, useState } from "react";
 import api from "@/app/lib/api";
 import Loading from "@/component/Loading";
@@ -13,13 +9,10 @@ import Error from "@/component/Error";
 import { motion } from "framer-motion";
 
 export default function Dashboard() {
-  const { student } = useStudent();
-  const { queries } = useQueries();
   const [enrolledCourses, setEnrolledCourses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-
+  let { student } = useStudent()
   const fetchEnrolledCourses = async () => {
     if (!student) return;
     try {
@@ -74,29 +67,14 @@ export default function Dashboard() {
             <h2 className="text-3xl font-extrabold text-white tracking-tight leading-tight">
               Welcome back, <span className="text-transparent bg-clip-text bg-linear-to-r from-sky-400 to-blue-100">{firstName}</span>
             </h2>
-            <p className="text-gray-400 max-w-md text-sm leading-relaxed">
-              You have <span className="text-white font-semibold">{enrolledCourses.length} active courses</span> and 
-              a resolution rate of <span className="text-white font-semibold font-mono tracking-tighter">
-                {queries.length > 0 ? Math.round((queries.filter(q => q.status === "resolved").length / queries.length) * 100) : 0}%
-              </span> on your queries.
-            </p>
+
           </div>
-          
-          <div className="flex gap-4">
-            <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-5 text-center min-w-[110px] transition-transform hover:scale-[1.02]">
-              <p className="text-3xl font-black text-white tabular-nums">{enrolledCourses.length}</p>
-              <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1">Courses</p>
-            </div>
-            <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-5 text-center min-w-[110px] transition-transform hover:scale-[1.02] border-l-blue-500/50">
-              <p className="text-3xl font-black text-white tabular-nums">{queries.filter(q => q.status === "pending").length}</p>
-              <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1">Pending</p>
-            </div>
-          </div>
+
+
         </div>
       </div>
 
       {/* Quick Stats */}
-      <StatsCard queries={queries} />
 
       {/* Courses section */}
       <div className="space-y-6">
@@ -139,4 +117,4 @@ export default function Dashboard() {
       </div>
     </motion.div>
   );
-}
+}

@@ -435,9 +435,9 @@ export default function CourseDetailPage() {
                                     `/dashboard/my-query/${query._id}`,
                                   );
                                 }}
-                                className="p-1.5 text-gray-300 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-all opacity-0 group-hover:opacity-100"
+                                className="p-1.5 text-gray-300 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-all "
                               >
-                                <ChevronRight className="h-3.5 w-3.5" />
+                                <MessageSquare className="h-3.5 w-3.5" />
                               </button>
                               <button
                                 onClick={(e) => toggleAnswer(query._id, e)}
