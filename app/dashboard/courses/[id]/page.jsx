@@ -250,7 +250,7 @@ export default function CourseDetailPage() {
         </div>
 
         {/* Page banner */}
-        <div className="bg-blue-600 rounded-2xl px-7 py-8 mb-6 relative overflow-hidden shadow-xl shadow-blue-100">
+        <div className="bg-blue-600 rounded-2xl px-6 py-6 mb-6 relative overflow-hidden shadow-md shadow-blue-100">
           <div
             className="absolute inset-0 opacity-[0.06]"
             style={{
@@ -262,22 +262,22 @@ export default function CourseDetailPage() {
           <div className="absolute -top-10 -right-10 w-40 h-40 bg-sky-300/30 rounded-full blur-3xl pointer-events-none" />
           <div className="relative flex flex-col sm:flex-row sm:items-center justify-between gap-5">
             <div className="flex items-center gap-4">
-              <div className="w-11 h-11 bg-white/10 border border-white/15 rounded-xl flex items-center justify-center flex-shrink-0">
+              <div className="w-11 h-11 bg-white/10 border border-white/15 rounded-xl flex items-center justify-center shrink-0">
                 <BookOpen className="h-5 w-5 text-white" />
               </div>
               <div>
-                <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-0.5">
+                <p className="text-xs font-semibold text-blue-200 uppercase tracking-wider mb-0.5">
                   Active Course
                 </p>
                 <h1 className="text-xl font-bold text-white tracking-tight">
                   {course.title || course.name}
                 </h1>
                 <div className="flex items-center gap-3 mt-1">
-                  <span className="flex items-center gap-1.5 text-xs text-gray-400">
+                  <span className="flex items-center gap-1.5 text-xs text-blue-100 font-medium">
                     <User className="h-3 w-3" />
                     {teacher ? teacher.name : "Faculty Member"}
                   </span>
-                  <span className="flex items-center gap-1.5 text-xs text-gray-400">
+                  <span className="flex items-center gap-1.5 text-xs text-blue-100 font-medium">
                     <Hash className="h-3 w-3" />
                     {course.code}
                   </span>
@@ -285,7 +285,7 @@ export default function CourseDetailPage() {
               </div>
             </div>
             {/* Mini stats */}
-            <div className="flex gap-3 flex-shrink-0">
+            <div className="flex gap-3 shrink-0">
               <div className="bg-white/10 border border-white/20 rounded-xl px-4 py-2.5 text-center min-w-[64px]">
                 <p className="text-xl font-bold text-white">
                   {courseQueries.length}
@@ -313,10 +313,10 @@ export default function CourseDetailPage() {
         {/* Body */}
         <div className="flex flex-col lg:flex-row gap-5">
           {/* ── Sidebar ── */}
-          <aside className="w-full lg:w-64 flex-shrink-0 space-y-4">
+          <aside className="w-full lg:w-64 shrink-0 space-y-4">
             {/* Schedule */}
             <div className="bg-white rounded-2xl border border-gray-100 p-5">
-              <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4">
+              <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-4">
                 Schedule
               </p>
               <div className="space-y-2.5">
@@ -333,14 +333,14 @@ export default function CourseDetailPage() {
                   },
                 ].map(({ icon: Icon, label, value }) => (
                   <div key={label} className="flex items-center gap-3">
-                    <div className="w-8 h-8 bg-gray-50 border border-gray-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <div className="w-8 h-8 bg-gray-50 border border-gray-100 rounded-lg flex items-center justify-center shrink-0">
                       <Icon className="h-3.5 w-3.5 text-gray-400" />
                     </div>
                     <div>
-                      <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">
+                      <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest">
                         {label}
                       </p>
-                      <p className="text-sm font-semibold text-gray-800">
+                      <p className="text-sm font-semibold text-gray-900">
                         {value}
                       </p>
                     </div>
@@ -366,7 +366,7 @@ export default function CourseDetailPage() {
                 </div>
                 <button
                   onClick={() => setIsModalOpen(true)}
-                  className="flex items-center gap-1.5 px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-black rounded-xl transition-all active:scale-[0.99] shadow-lg shadow-blue-100 uppercase tracking-widest"
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg transition-all active:scale-[0.99] shadow-sm uppercase tracking-wider"
                 >
                   <Plus className="h-3.5 w-3.5" />
                   New Query
@@ -407,12 +407,12 @@ export default function CourseDetailPage() {
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2 mb-1.5">
                                 <span
-                                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-bold uppercase tracking-tight border ${s.bg} ${s.color}`}
+                                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider border ${s.bg} ${s.color}`}
                                 >
                                   <StatusIcon className="h-2.5 w-2.5" />
                                   {s.label}
                                 </span>
-                                <span className="text-[10px] text-gray-300 font-medium">
+                                <span className="text-[10px] text-gray-400 font-medium">
                                   {new Date(query.createdAt).toLocaleDateString(
                                     "en-US",
                                     {
@@ -423,11 +423,11 @@ export default function CourseDetailPage() {
                                   )}
                                 </span>
                               </div>
-                              <p className="text-sm font-semibold text-gray-800 group-hover:text-gray-900 transition-colors line-clamp-2 leading-snug">
+                              <p className="text-sm font-medium text-gray-800 group-hover:text-gray-900 transition-colors line-clamp-2 leading-snug">
                                 {query.query}
                               </p>
                             </div>
-                            <div className="flex items-center gap-1 flex-shrink-0 mt-0.5">
+                            <div className="flex items-center gap-1 shrink-0 mt-0.5">
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();
@@ -466,7 +466,7 @@ export default function CourseDetailPage() {
                                   {query.answer ? (
                                     <div className="mt-4 bg-white rounded-xl p-4 border border-gray-100">
                                       <div className="flex items-center gap-2.5 mb-3">
-                                        <div className="w-7 h-7 rounded-lg bg-gray-900 flex items-center justify-center text-[10px] font-bold text-white uppercase flex-shrink-0">
+                                        <div className="w-7 h-7 rounded-lg bg-gray-900 flex items-center justify-center text-[10px] font-bold text-white uppercase shrink-0">
                                           {teacher ? teacher.name[0] : "F"}
                                         </div>
                                         <div>
@@ -519,7 +519,7 @@ export default function CourseDetailPage() {
                     </p>
                     <button
                       onClick={() => setIsModalOpen(true)}
-                      className="flex items-center gap-1.5 px-4 py-2 bg-gray-900 hover:bg-gray-800 text-white text-xs font-bold rounded-xl transition-all"
+                      className="flex items-center gap-1.5 px-4 py-2 bg-gray-900 hover:bg-gray-800 text-white text-xs font-semibold rounded-xl transition-all"
                     >
                       <Plus className="h-3.5 w-3.5" />
                       Ask First Query
@@ -557,7 +557,7 @@ export default function CourseDetailPage() {
                     <h3 className="text-sm font-bold text-gray-900">
                       New Query
                     </h3>
-                    <p className="text-xs text-gray-400 mt-0.5">
+                    <p className="text-xs text-gray-500 mt-0.5">
                       {course.title || course.name}
                     </p>
                   </div>
@@ -572,7 +572,7 @@ export default function CourseDetailPage() {
                 {/* Modal body */}
                 <form onSubmit={handleSubmitQuery} className="p-6">
                   <div className="mb-4">
-                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
+                    <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">
                       Your Question
                     </label>
                     <textarea

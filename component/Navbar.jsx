@@ -51,11 +51,11 @@ export default function Navbar() {
             <Link href="/dashboard" className="flex items-center gap-3 group">
               <motion.div
                 whileHover={{ rotate: 5, scale: 1.05 }}
-                className="h-10 w-10 bg-linear-to-br from-indigo-600 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-200"
+                className="h-10 w-10 bg-linear-to-br from-indigo-600 to-purple-600 rounded-2xl flex items-center justify-center shadow-md shadow-indigo-100"
               >
-                <span className="text-white font-black text-lg">S</span>
+                <span className="text-white font-bold text-lg">S</span>
               </motion.div>
-              <span className="text-xl font-black text-gray-900 tracking-tight hidden sm:block">
+              <span className="text-xl font-bold text-gray-900 tracking-tight hidden sm:block">
                 Query<span className="text-indigo-600">Hub</span>
               </span>
             </Link>
@@ -65,7 +65,7 @@ export default function Navbar() {
                 <Link
                   key={link.href}
                   href={link.href}
-                  className={`relative px-4 py-2 rounded-xl text-sm font-bold transition-all duration-300 ${isActive(link.href)
+                  className={`relative px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-300 ${isActive(link.href)
                       ? "text-indigo-600 bg-indigo-50/50"
                       : "text-gray-500 hover:text-gray-900 hover:bg-gray-50"
                     }`}
@@ -102,10 +102,10 @@ export default function Navbar() {
                   />
                 </div>
                 <div className="hidden lg:block text-left">
-                  <p className="text-sm font-bold text-gray-900 leading-none">
+                  <p className="text-sm font-semibold text-gray-900 leading-none">
                     {student?.name || "Student"}
                   </p>
-                  <p className="text-[11px] text-gray-400 font-bold mt-1">
+                  <p className="text-[11px] text-gray-500 font-medium mt-1">
                     {student?.rollNumber || "ID Not Found"}
                   </p>
                 </div>
@@ -144,7 +144,7 @@ export default function Navbar() {
                         logout();
                         setIsProfileOpen(false);
                       }}
-                      className="flex items-center gap-3 w-full px-4 py-3 rounded-xl text-red-600 hover:bg-red-50 transition-all font-bold"
+                      className="flex items-center gap-3 w-full px-4 py-3 rounded-xl text-red-600 hover:bg-red-50 transition-all font-medium"
                     >
                       <LogOut className="w-4 h-4" />
                       Sign Out
@@ -184,9 +184,9 @@ export default function Navbar() {
                   key={link.href}
                   href={link.href}
                   onClick={() => setIsMenuOpen(false)}
-                  className={`flex items-center gap-4 px-5 py-4 rounded-2xl font-bold transition-all ${isActive(link.href)
-                      ? "bg-indigo-50 text-indigo-600"
-                      : "text-gray-500 hover:bg-gray-50"
+                  className={`flex items-center gap-4 px-5 py-3.5 rounded-xl font-semibold transition-all ${isActive(link.href)
+                      ? "bg-indigo-50 text-indigo-700"
+                      : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
                     }`}
                 >
                   {link.label}
@@ -195,7 +195,7 @@ export default function Navbar() {
               <div className="h-px bg-gray-50 my-4" />
               <button
                 onClick={logout}
-                className="flex items-center gap-4 w-full px-5 py-4 rounded-2xl text-red-600 bg-red-50/50 font-bold"
+                className="flex items-center gap-4 w-full px-5 py-3.5 rounded-xl text-red-600 hover:bg-red-50 font-semibold transition-all mt-2"
               >
                 <LogOut className="w-5 h-5" />
                 Sign Out

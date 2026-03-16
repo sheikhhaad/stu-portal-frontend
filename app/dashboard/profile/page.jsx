@@ -145,7 +145,7 @@ export default function ProfilePage() {
             <div className="mt-4 md:mt-0 md:ml-6 flex-1">
               <div className="flex flex-col md:flex-row md:items-center md:justify-between">
                 <div>
-                  <h2 className="text-2xl font-bold text-gray-900">
+                  <h2 className="text-xl font-bold text-gray-900 tracking-tight">
                     {formData.name}
                   </h2>
                   <p className="text-gray-500 flex items-center mt-1">
@@ -197,7 +197,7 @@ export default function ProfilePage() {
               <div className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">
                       Full Name
                     </label>
                     <input
@@ -205,11 +205,11 @@ export default function ProfilePage() {
                       name="name"
                       value={profileForm.name}
                       onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900 outline-none focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/10 transition-all mb-4"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">
                       Email
                     </label>
                     <input
@@ -217,11 +217,11 @@ export default function ProfilePage() {
                       name="email"
                       value={profileForm.email}
                       onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900 outline-none focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/10 transition-all mb-4"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">
                       Phone
                     </label>
                     <input
@@ -229,11 +229,11 @@ export default function ProfilePage() {
                       name="phone"
                       value={profileForm.phone}
                       onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900 outline-none focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/10 transition-all mb-4"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">
                       Date of Birth
                     </label>
                     <input
@@ -241,11 +241,11 @@ export default function ProfilePage() {
                       name="dateOfBirth"
                       value={profileForm.dateOfBirth}
                       onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900 outline-none focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/10 transition-all mb-4"
                     />
                   </div>
                   <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">
                       Address
                     </label>
                     <input
@@ -253,11 +253,11 @@ export default function ProfilePage() {
                       name="address"
                       value={profileForm.address}
                       onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900 outline-none focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/10 transition-all mb-4"
                     />
                   </div>
                   <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">
                       Bio
                     </label>
                     <textarea
@@ -265,7 +265,7 @@ export default function ProfilePage() {
                       rows="3"
                       value={profileForm.bio}
                       onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900 outline-none focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/10 transition-all mb-4 resize-none"
                     />
                   </div>
                 </div>

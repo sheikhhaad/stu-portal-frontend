@@ -132,7 +132,7 @@ export default function Page() {
         <div className="mb-7">
           <div className="flex items-center gap-2 mb-5">
             <div className="w-2 h-2 rounded-full bg-blue-600" />
-            <span className="text-xs font-semibold tracking-widest uppercase text-gray-400">
+            <span className="text-xs font-semibold tracking-widest uppercase text-gray-500">
               Student Portal
             </span>
           </div>
@@ -159,8 +159,8 @@ export default function Page() {
               className="space-y-4"
             >
               {/* Student ID */}
-              <div>
-                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">
+              <div className="space-y-1.5">
+                <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wider">
                   Student ID
                 </label>
                 <input
@@ -175,8 +175,8 @@ export default function Page() {
               </div>
 
               {/* Password */}
-              <div>
-                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">
+              <div className="space-y-1.5">
+                <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wider">
                   Password
                 </label>
                 <div className="relative">
@@ -232,7 +232,7 @@ export default function Page() {
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="w-full bg-blue-900 hover:bg-blue-800 disabled:bg-gray-300 disabled:cursor-not-allowed text-white text-sm font-semibold rounded-xl py-2.5 flex items-center justify-center gap-2 transition-all active:scale-[0.99] mt-1"
+                className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white text-sm font-medium rounded-xl py-3 flex items-center justify-center gap-2 transition-all active:scale-[0.99] mt-2 shadow-sm"
               >
                 {isSubmitting ? (
                   <>
@@ -276,7 +276,7 @@ export default function Page() {
               <button
                 type="button"
                 onClick={toggleQrLogin}
-                className="w-full flex items-center justify-center gap-2.5 border border-gray-200 hover:border-blue-400 hover:bg-blue-50 hover:text-blue-600 text-gray-600 text-sm font-semibold rounded-xl py-2.5 transition-all active:scale-[0.99]"
+                className="w-full flex items-center justify-center gap-2.5 border border-gray-200 hover:border-blue-400 hover:bg-blue-50 text-gray-700 text-sm font-medium rounded-xl py-3 transition-all active:scale-[0.99]"
               >
                 <svg width="15" height="15" viewBox="0 0 16 16" fill="none">
                   <rect

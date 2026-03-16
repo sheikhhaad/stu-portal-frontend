@@ -64,7 +64,7 @@ export default function Dashboard() {
               </span>
               <span className="text-[10px] font-bold text-sky-400 uppercase tracking-widest">Live Academic Status</span>
             </div>
-            <h2 className="text-3xl font-extrabold text-white tracking-tight leading-tight">
+            <h2 className="text-2xl font-bold text-white tracking-tight leading-tight">
               Welcome back, <span className="text-transparent bg-clip-text bg-linear-to-r from-sky-400 to-blue-100">{firstName}</span>
             </h2>
 
@@ -80,8 +80,8 @@ export default function Dashboard() {
       <div className="space-y-6">
         <div className="flex items-end justify-between border-b border-gray-100 pb-4">
           <div>
-            <h3 className="text-xl font-bold text-gray-900 tracking-tight">Active Enrollments</h3>
-            <p className="text-xs text-gray-400 font-medium mt-1 uppercase tracking-wider">
+            <h3 className="text-lg font-bold text-gray-900 tracking-tight">Active Enrollments</h3>
+            <p className="text-[11px] text-gray-500 font-medium mt-1 uppercase tracking-wider">
               {enrolledCourses.length} Registered Courses
             </p>
           </div>
@@ -95,8 +95,8 @@ export default function Dashboard() {
             <div className="w-20 h-20 bg-gray-50 rounded-3xl flex items-center justify-center mb-6 border border-gray-100 shadow-inner">
               <GraduationCap className="w-10 h-10 text-gray-200" />
             </div>
-            <h4 className="text-lg font-bold text-gray-900 mb-2 mt-2">No courses enrolled yet</h4>
-            <p className="text-sm text-gray-400 max-w-sm mx-auto">
+            <h4 className="text-base font-semibold text-gray-900 mb-2 mt-2">No courses enrolled yet</h4>
+            <p className="text-sm text-gray-500 max-w-sm mx-auto">
               Stay tuned! Your courses will appear here once the administration processes your enrollment.
             </p>
           </div>

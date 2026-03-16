@@ -79,14 +79,14 @@ export default function MyQueriesPage() {
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div>
           <div className="flex items-center gap-3 mb-2">
-            <div className="w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center shadow-xl shadow-blue-100">
+            <div className="w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center shadow-md shadow-blue-100">
               <MessageSquare className="w-6 h-6 text-white" />
             </div>
-            <h1 className="text-3xl font-black text-gray-900 tracking-tight">
+            <h1 className="text-2xl font-bold text-gray-900 tracking-tight">
               Academic Queries
             </h1>
           </div>
-          <p className="text-[11px] text-gray-400 font-bold uppercase tracking-[0.2em]">
+          <p className="text-[11px] text-gray-500 font-semibold uppercase tracking-widest">
             Personal Discussion Board
           </p>
         </div>
@@ -96,10 +96,10 @@ export default function MyQueriesPage() {
             <button
               key={f}
               onClick={() => setFilter(f)}
-              className={`px-5 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
+              className={`px-5 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all ${
                 filter === f
                   ? "bg-blue-600 text-white shadow-sm border border-blue-500"
-                  : "text-gray-400 hover:text-blue-600"
+                  : "text-gray-500 hover:text-blue-600"
               }`}
             >
               {f}
@@ -110,13 +110,13 @@ export default function MyQueriesPage() {
 
       {/* Search Bar */}
       <div className="relative group">
-        <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-300 group-focus-within:text-blue-600 transition-colors" />
+        <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 group-focus-within:text-blue-600 transition-colors" />
         <input
           type="text"
           placeholder="Filter by question content or course ID..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          className="w-full bg-white border border-gray-100 rounded-3xl py-5 pl-14 pr-6 text-sm font-bold text-gray-900 placeholder-gray-300 outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-600/5 transition-all shadow-sm"
+          className="w-full bg-white border border-gray-200 rounded-2xl py-4 pl-14 pr-6 text-sm font-medium text-gray-900 placeholder-gray-400 outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-600/5 transition-all shadow-sm"
         />
       </div>
 
@@ -130,12 +130,12 @@ export default function MyQueriesPage() {
               className="bg-white rounded-[2.5rem] border border-dashed border-gray-200 py-32 text-center"
             >
               <div className="w-20 h-20 bg-gray-50 rounded-3xl flex items-center justify-center mx-auto mb-6 border border-gray-100">
-                <Inbox className="w-10 h-10 text-gray-200" />
+                <Inbox className="w-10 h-10 text-gray-300" />
               </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-2">
+              <h3 className="text-lg font-bold text-gray-900 mb-2">
                 No conversations found
               </h3>
-              <p className="text-gray-400 text-sm max-w-xs mx-auto mb-8">
+              <p className="text-gray-500 text-sm max-w-xs mx-auto mb-8">
                 {searchTerm
                   ? "Try adjusting your search terms or filters."
                   : "Your academic discussions will appear here."}
@@ -155,23 +155,23 @@ export default function MyQueriesPage() {
                   onClick={() =>
                     router.push(`/dashboard/my-query/${query._id}`)
                   }
-                  className="bg-white border border-gray-100 rounded-4xl p-6 flex flex-col md:flex-row md:items-center justify-between gap-6 cursor-pointer hover:border-blue-600 hover:shadow-2xl hover:shadow-blue-50 transition-all group relative overflow-hidden"
+                  className="bg-white border border-gray-100 rounded-2xl p-5 flex flex-col md:flex-row md:items-center justify-between gap-6 cursor-pointer hover:border-blue-300 hover:shadow-md hover:shadow-blue-50 transition-all group relative overflow-hidden"
                 >
                   <div className="flex-1 space-y-4">
                     <div className="flex flex-wrap items-center gap-3">
                       <span
-                        className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-[10px] font-black uppercase tracking-widest border ${status.bg} ${status.color}`}
+                        className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider border ${status.bg} ${status.color}`}
                       >
                         <Icon className="w-3 h-3" />
                         {status.label}
                       </span>
-                      <span className="flex items-center gap-1.5 text-[10px] text-gray-400 font-bold uppercase tracking-wider bg-gray-50 px-3 py-1 rounded-lg border border-gray-100">
+                      <span className="flex items-center gap-1.5 text-[10px] text-gray-500 font-semibold uppercase tracking-wider bg-gray-50 px-3 py-1 rounded-lg border border-gray-100">
                         <Calendar className="w-3 h-3" />
                         {new Date(query.createdAt).toLocaleDateString()}
                       </span>
                     </div>
 
-                    <h3 className="text-lg font-black text-gray-900 leading-tight group-hover:text-gray-700 transition-colors">
+                    <h3 className="text-base font-bold text-gray-900 leading-tight group-hover:text-gray-700 transition-colors">
                       {query.query}
                     </h3>
                   </div>
