@@ -228,9 +228,9 @@ export default function CourseDetailPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pb-16 pt-6">
+      <div className=" mx-auto ">
         {/* Nav row */}
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center flex-wrap gap-2 justify-between mb-6">
           <Link
             href="/dashboard"
             className="inline-flex items-center gap-2 text-sm text-gray-400 hover:text-gray-900 font-semibold transition-colors group"

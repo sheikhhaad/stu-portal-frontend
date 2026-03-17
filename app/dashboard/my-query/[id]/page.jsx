@@ -8,12 +8,10 @@ import {
   ChevronLeft,
   Calendar,
   FileText,
-  User,
   GraduationCap,
   MessageSquare,
 } from "lucide-react";
 import { useStudent } from "@/app/context/StudentContext";
-import axios from "axios";
 import api from "@/app/lib/api";
 
 const QueryDetail = () => {
@@ -26,13 +24,10 @@ const QueryDetail = () => {
   const [messages, setMessages] = useState([]);
   const [sending, setSending] = useState(false);
   const [fetchingMessages, setFetchingMessages] = useState(false);
-
   const messagesEndRef = useRef(null);
 
-  // Find query from context
   const query = queries?.find((q) => q._id === id);
 
-  // Scroll to bottom of messages
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
@@ -41,37 +36,32 @@ const QueryDetail = () => {
     scrollToBottom();
   }, [messages]);
 
-  // Fetch messages for this query
   const fetchMessages = async () => {
     if (!query?._id) return;
-
     setFetchingMessages(true);
     try {
-      const res = await api.get(
-        `messages/${query._id}`,
-        { withCredentials: true },
-      );
-
-      if (res.data && res.data.length > 0) {
-        // Transform messages to match your format
-        const formattedMessages = res.data.map((msg) => ({
-          id: msg._id,
-          sender:
-            msg.sender_role === "student"
-              ? student?.name || "You"
-              : "Instructor",
-          senderRole: msg.sender_role,
-          content: msg.message,
-          timestamp: new Date(msg.createdAt).toLocaleString(),
-          avatar:
-            msg.sender_role === "student"
-              ? student?.name
-                ? student.name.charAt(0).toUpperCase()
-                : "S"
-              : "I",
-        }));
-
-        setMessages(formattedMessages);
+      const res = await api.get(`messages/${query._id}`, {
+        withCredentials: true,
+      });
+      if (res.data?.length > 0) {
+        setMessages(
+          res.data.map((msg) => ({
+            id: msg._id,
+            sender:
+              msg.sender_role === "student"
+                ? student?.name || "You"
+                : "Instructor",
+            senderRole: msg.sender_role,
+            content: msg.message,
+            timestamp: new Date(msg.createdAt).toLocaleString(),
+            avatar:
+              msg.sender_role === "student"
+                ? student?.name
+                  ? student.name.charAt(0).toUpperCase()
+                  : "S"
+                : "I",
+          })),
+        );
       }
     } catch (error) {
       console.error("Error fetching messages:", error);
@@ -80,18 +70,13 @@ const QueryDetail = () => {
     }
   };
 
-  // Fetch messages when component mounts
   useEffect(() => {
-    if (query?._id) {
-      fetchMessages();
-    }
+    if (query?._id) fetchMessages();
   }, [query?._id]);
 
   const handleSendMessage = async (e) => {
     e.preventDefault();
-
     if (!message.trim() || !student?._id || !id) return;
-
     setSending(true);
     try {
       const res = await api.post(`/messages/send`, {
@@ -100,61 +85,53 @@ const QueryDetail = () => {
         sender_role: "student",
         message: message.trim(),
       });
-
-      // Add the new message to the list
-      const newMessage = {
-        id: res.data._id || Date.now(),
-        sender: student?.name || "You",
-        senderRole: "student",
-        content: message.trim(),
-        timestamp: new Date().toLocaleString(),
-        avatar: student?.name ? student.name.charAt(0).toUpperCase() : "S",
-      };
-
-      setMessages((prev) => [...prev, newMessage]);
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: res.data._id || Date.now(),
+          sender: student?.name || "You",
+          senderRole: "student",
+          content: message.trim(),
+          timestamp: new Date().toLocaleString(),
+          avatar: student?.name ? student.name.charAt(0).toUpperCase() : "S",
+        },
+      ]);
       setMessage("");
-    } catch (error) {
-      console.error("Error sending message:", error);
+    } catch {
       alert("Failed to send message. Please try again.");
     } finally {
       setSending(false);
     }
   };
 
-  // Handle Enter key press
   const handleKeyDown = (e) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      if (message.trim() && !sending) {
-        handleSendMessage(e);
-      }
+      if (message.trim() && !sending) handleSendMessage(e);
     }
   };
 
   if (loading && queries.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh]">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-        <p className="mt-4 text-gray-500 font-medium">
-          Loading query details...
-        </p>
+        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600" />
+        <p className="mt-3 text-gray-500 text-sm">Loading query details...</p>
       </div>
     );
   }
 
   if (!query) {
     return (
-      <div className="max-w-4xl mx-auto py-12 text-center">
-        <h2 className="text-xl font-bold text-gray-800">Query not found</h2>
-        <p className="text-gray-500 mt-2">
-          The query you are looking for does not exist or has been removed.
+      <div className="max-w-3xl mx-auto py-10 text-center">
+        <h2 className="text-lg font-semibold text-gray-800">Query not found</h2>
+        <p className="text-gray-500 text-sm mt-1">
+          This query does not exist or has been removed.
         </p>
         <button
           onClick={() => router.back()}
-          className="text-blue-600 hover:underline mt-6 inline-flex items-center font-medium"
+          className="text-blue-600 hover:underline mt-4 inline-flex items-center text-sm"
         >
-          <ChevronLeft className="h-4 w-4 mr-1" />
-          Back to All Queries
+          <ChevronLeft className="h-4 w-4 mr-1" /> Back to All Queries
         </button>
       </div>
     );
@@ -174,70 +151,66 @@ const QueryDetail = () => {
   };
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8 animate-fade-in">
-      {/* Back Navigation */}
+    <div className="max-w-9xl mx-auto py-3">
+      {/* Back */}
       <button
         onClick={() => router.back()}
-        className="inline-flex items-center text-gray-600 hover:text-blue-600 mb-6 transition-colors"
+        className="inline-flex items-center text-sm text-gray-500 hover:text-blue-600 mb-4 transition-colors"
       >
-        <ChevronLeft className="h-5 w-5 mr-1" />
-        Back to Queries
+        <ChevronLeft className="h-4 w-4 mr-1" /> Back to Queries
       </button>
 
       {/* Query Info Card */}
-      <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-6 mb-6">
-        <div className="flex flex-col md:flex-row md:items-start md:justify-between mb-4">
+      <div className="bg-white rounded-xl border border-gray-100 shadow-sm mb-3">
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-3">
           <div>
-            <div className="flex items-center gap-3 mb-2">
-              <h2 className="text-xl font-bold text-gray-800">
+            <div className="flex items-center gap-2 mb-1">
+              <h2 className="text-base font-semibold text-gray-800">
                 {query.course}
               </h2>
               <span
-                className={`px-3 py-1 rounded-full text-xs font-medium border capitalize ${getStatusColor(query.status)}`}
+                className={`px-2 py-0.5 rounded-full text-xs font-medium border capitalize ${getStatusColor(query.status)}`}
               >
                 {query.status}
               </span>
             </div>
-            <div className="flex items-center gap-4 text-sm text-gray-500">
-              <span className="flex items-center">
-                <FileText className="h-4 w-4 mr-1" />
-                Query ID: {query._id.slice(-8)}
+            <div className="flex items-center gap-2 text-xs text-gray-400">
+              <span className="flex items-center gap-1">
+                <FileText className="h-3.5 w-3.5" /> #{query._id.slice(-8)}
               </span>
-              <span className="flex items-center">
-                <Calendar className="h-4 w-4 mr-1" />
+              <span className="flex items-center gap-1">
+                <Calendar className="h-3.5 w-3.5" />
                 {new Date(query.createdAt).toLocaleDateString()}
               </span>
             </div>
           </div>
-          <div className="mt-4 md:mt-0 flex items-center gap-2 bg-blue-50 px-4 py-2 rounded-lg">
-            <GraduationCap className="h-5 w-5 text-blue-600" />
-            <span className="text-sm font-medium text-blue-700">
+          <div className="flex items-center gap-1.5 bg-blue-50 px-3 py-1.5 rounded-lg self-start">
+            <GraduationCap className="h-4 w-4 text-blue-600" />
+            <span className="text-xs font-medium text-blue-700">
               Instructor: {query.instructor}
             </span>
           </div>
         </div>
-
-        <div className="bg-gray-50 rounded-lg p-4 border border-gray-100">
-          <p className="text-gray-700 whitespace-pre-wrap">
+        <div className="bg-gray-50 rounded-lg p-3 border border-gray-100">
+          <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">
             {typeof query.query === "string" ? query.query : "No query text"}
           </p>
         </div>
       </div>
 
       {/* Chat Section */}
-      <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
-        <div className="p-6 border-b border-gray-100 bg-linear-to-r from-blue-50 to-white">
-          <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
-            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-            Discussion
-          </h3>
+      <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+        {/* Header */}
+        <div className="px-4 py-2.5 border-b border-gray-100 flex items-center gap-2">
+          <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+          <h3 className="text-sm font-semibold text-gray-800">Discussion</h3>
         </div>
 
-        {/* Messages Container */}
-        <div className="p-6 space-y-6 max-h-[500px] overflow-y-auto bg-gray-50/50">
+        {/* Messages */}
+        <div className="px-4 py-3 space-y-3 max-h-[420px] overflow-y-auto bg-gray-50/50">
           {fetchingMessages ? (
-            <div className="flex justify-center py-12">
-              <div className="animate-spin rounded-full h-8 w-8 border-3 border-blue-200 border-t-blue-600"></div>
+            <div className="flex justify-center py-8">
+              <div className="animate-spin rounded-full h-6 w-6 border-2 border-blue-200 border-t-blue-600" />
             </div>
           ) : messages.length > 0 ? (
             <>
@@ -246,66 +219,51 @@ const QueryDetail = () => {
                 const showAvatar =
                   index === 0 ||
                   messages[index - 1]?.senderRole !== msg.senderRole;
-
                 return (
                   <div
                     key={msg.id}
                     className={`flex ${isStudent ? "justify-end" : "justify-start"}`}
                   >
                     <div
-                      className={`flex max-w-[80%] md:max-w-[70%] ${isStudent ? "flex-row-reverse" : "flex-row"}`}
+                      className={`flex max-w-[78%] ${isStudent ? "flex-row-reverse" : "flex-row"} gap-2`}
                     >
-                      {/* Avatar - Only show for first message in a sequence from same sender */}
                       {showAvatar ? (
                         <div
-                          className={`shrink-0 ${isStudent ? "ml-3" : "mr-3"}`}
+                          className={`shrink-0 h-8 w-8 rounded-full flex items-center justify-center text-xs font-semibold ${isStudent ? "bg-blue-600 text-white" : "bg-gray-700 text-white"}`}
                         >
-                          <div
-                            className={`h-10 w-10 rounded-full flex items-center justify-center text-sm font-semibold shadow-md ${isStudent
-                                ? "bg-blue-600 text-white"
-                                : "bg-gray-700 text-white"
-                              }`}
-                          >
-                            {msg.avatar}
-                          </div>
+                          {msg.avatar}
                         </div>
                       ) : (
-                        <div
-                          className={`shrink-0 ${isStudent ? "ml-3" : "mr-3"} w-10`}
-                        />
+                        <div className="shrink-0 w-8" />
                       )}
-
-                      {/* Message Content */}
                       <div>
-                        {/* Sender Name - Only show for first message in a sequence */}
                         {showAvatar && (
                           <div
-                            className={`text-xs font-medium mb-1 ${isStudent ? "text-right" : "text-left"}`}
+                            className={`text-[11px] mb-1 ${isStudent ? "text-right" : "text-left"}`}
                           >
                             <span
                               className={
-                                isStudent ? "text-blue-600" : "text-gray-700"
+                                isStudent
+                                  ? "text-blue-600 font-medium"
+                                  : "text-gray-600 font-medium"
                               }
                             >
                               {msg.sender}
                             </span>
-                            <span className="text-gray-400 mx-2">•</span>
+                            <span className="text-gray-400 mx-1">·</span>
                             <span className="text-gray-400">
                               {msg.timestamp}
                             </span>
                           </div>
                         )}
-
-                        {/* Message Bubble */}
                         <div
-                          className={`rounded-2xl p-4 shadow-sm ${isStudent
-                              ? "bg-blue-600 text-white rounded-tr-none"
-                              : "bg-white text-gray-800 rounded-tl-none border border-gray-200"
-                            }`}
+                          className={`rounded-xl px-3 py-2 text-sm leading-relaxed ${
+                            isStudent
+                              ? "bg-blue-600 text-white rounded-tr-sm"
+                              : "bg-white text-gray-800 rounded-tl-sm border border-gray-200"
+                          }`}
                         >
-                          <p className="text-sm leading-relaxed whitespace-pre-wrap">
-                            {msg.content}
-                          </p>
+                          {msg.content}
                         </div>
                       </div>
                     </div>
@@ -315,22 +273,24 @@ const QueryDetail = () => {
               <div ref={messagesEndRef} />
             </>
           ) : (
-            <div className="text-center py-12">
-              <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-4">
-                <MessageSquare className="h-8 w-8 text-indigo-400" />
+            <div className="text-center py-8">
+              <div className="w-12 h-12 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-3">
+                <MessageSquare className="h-5 w-5 text-indigo-400" />
               </div>
-              <p className="text-gray-500 font-medium">No messages yet</p>
-              <p className="text-gray-400 text-sm mt-1">
+              <p className="text-sm text-gray-500 font-medium">
+                No messages yet
+              </p>
+              <p className="text-xs text-gray-400 mt-0.5">
                 Be the first to start the conversation
               </p>
             </div>
           )}
         </div>
 
-        {/* Message Input */}
-        <div className="p-6 border-t border-gray-100 bg-white">
+        {/* Input */}
+        <div className="px-4 py-3 border-t border-gray-100 bg-white">
           <form onSubmit={handleSendMessage}>
-            <div className="flex items-end gap-3">
+            <div className="flex items-end gap-2">
               <div className="flex-1 relative">
                 <textarea
                   value={message}
@@ -338,35 +298,34 @@ const QueryDetail = () => {
                   onKeyDown={handleKeyDown}
                   placeholder="Type your message..."
                   rows="1"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none pr-12 transition-all"
-                  style={{ minHeight: "52px", maxHeight: "120px" }}
+                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none pr-10 transition-all"
+                  style={{ minHeight: "40px", maxHeight: "100px" }}
                 />
                 <button
                   type="button"
-                  className="absolute right-3 bottom-3 text-gray-400 hover:text-blue-600 transition-colors"
-                  title="Attach file"
+                  className="absolute right-2.5 bottom-2 text-gray-400 hover:text-blue-600 transition-colors"
                 >
-                  <Paperclip className="h-5 w-5" />
+                  <Paperclip className="h-4 w-4" />
                 </button>
               </div>
               <button
                 type="submit"
                 disabled={!message.trim() || sending}
-                className={`p-3 rounded-xl bg-blue-600 text-white hover:bg-blue-700 transition-all shadow-md ${!message.trim() || sending
+                className={`p-2.5 rounded-lg bg-blue-600 text-white transition-all ${
+                  !message.trim() || sending
                     ? "opacity-50 cursor-not-allowed"
-                    : "hover:shadow-lg transform hover:-translate-y-0.5"
-                  }`}
-                title="Send message"
+                    : "hover:bg-blue-700"
+                }`}
               >
                 {sending ? (
-                  <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>
+                  <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
                 ) : (
-                  <Send className="h-5 w-5" />
+                  <Send className="h-4 w-4" />
                 )}
               </button>
             </div>
-            <p className="text-xs text-gray-400 mt-3 text-center">
-              Press Enter to send • Shift + Enter for new line
+            <p className="text-[11px] text-gray-400 mt-1.5 text-center">
+              Enter to send · Shift+Enter for new line
             </p>
           </form>
         </div>

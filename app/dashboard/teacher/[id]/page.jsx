@@ -238,7 +238,7 @@ const TeacherDetail = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       <style>{`.scrollbar-none::-webkit-scrollbar{display:none}.scrollbar-none{-ms-overflow-style:none;scrollbar-width:none}`}</style>
-      <div className=" mx-auto px-4 sm:px-6 lg:px-8 pb-16 pt-6">
+      <div className=" ">
         {/* Back link */}
         <Link
           href="/dashboard"
