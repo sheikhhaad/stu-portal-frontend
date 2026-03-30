@@ -79,7 +79,6 @@ export default function CourseDetailPage() {
   const [submitError, setSubmitError] = useState("");
   const [teacher, setTeacher] = useState(null);
   const [teacherId, setTeacherId] = useState(null); // Add state for teacher_id
-  console.log(teacher);
 
   // Fetch course enrollment and get teacher_id
   useEffect(() => {
@@ -495,11 +494,11 @@ export default function CourseDetailPage() {
                                     <div className="mt-4 bg-white rounded-xl p-4 border border-gray-100">
                                       <div className="flex items-center gap-2.5 mb-3">
                                         <div className="w-7 h-7 rounded-lg bg-gray-900 flex items-center justify-center text-[10px] font-bold text-white uppercase shrink-0">
-                                          {teacher ? teacher.name[0] : "F"}
+                                          {teacher ? teacher.teacher.name[0] : "F"}
                                         </div>
                                         <div>
                                           <p className="text-xs font-bold text-gray-900">
-                                            {teacher ? teacher.name : "Faculty"}
+                                            {teacher ? teacher.teacher.name : "Faculty"}
                                           </p>
                                           <p className="text-[10px] text-gray-400">
                                             Faculty Response
