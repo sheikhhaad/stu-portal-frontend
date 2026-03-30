@@ -4,14 +4,12 @@ import { useStudent } from "@/app/context/StudentContext";
 import api from "@/app/lib/api";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback, useRef } from "react";
 import {
   Calendar,
   Clock,
   GraduationCap,
-  CheckCircle2,
   CalendarDays,
-  Lock,
   User,
   MapPin,
   Filter,
@@ -21,11 +19,13 @@ import {
   ChevronDown,
   ChevronUp,
   SlidersHorizontal,
+  RefreshCw,
 } from "lucide-react";
 import { SlotCard } from "@/component/SlotCard";
 import { motion, AnimatePresence } from "framer-motion";
+import socket from "@/app/lib/socket";
 
-// ── Helpers ──────────────────────────────────────────────────────
+// ── Helpers ──
 const formatDate = (dateString) => {
   try {
     const date = new Date(dateString);
@@ -102,14 +102,15 @@ const generateTimeBlocks = (slot) => {
 
 const FILTER_OPTIONS = { ALL: "all", AVAILABLE: "available", BOOKED: "booked" };
 
-// ── Component ─────────────────────────────────────────────────────
+// ── Component ──
 const TeacherDetail = () => {
-  const { id } = useParams();
+  const { id: teacherId } = useParams();
   const { student } = useStudent();
 
   const [slots, setSlots] = useState([]);
   const [sessions, setSessions] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
   const [bookingId, setBookingId] = useState(null);
   const [selectedDate, setSelectedDate] = useState(null);
@@ -118,66 +119,220 @@ const TeacherDetail = () => {
   const [collapsedDates, setCollapsedDates] = useState({});
   const [filterOpen, setFilterOpen] = useState(false);
 
+  const isMounted = useRef(true);
+
   useEffect(() => {
-    if (!id) return;
-    (async () => {
-      try {
-        const res = await api.get(`/availability/${id}`);
+    isMounted.current = true;
+    return () => {
+      isMounted.current = false;
+    };
+  }, []);
+
+  // Fetch slots
+  const fetchSlots = useCallback(async () => {
+    if (!teacherId) return;
+
+    try {
+      setLoading(true);
+      setError(null);
+      const res = await api.get(`/availability/${teacherId}`);
+
+      if (isMounted.current) {
         setSlots(res.data || []);
-      } catch {
+      }
+    } catch (err) {
+      console.error("Error fetching slots:", err);
+      if (isMounted.current) {
         setError("Failed to load availability slots.");
-      } finally {
+      }
+    } finally {
+      if (isMounted.current) {
         setLoading(false);
       }
-    })();
-  }, [id]);
+    }
+  }, [teacherId]);
 
-  useEffect(() => {
-    if (!id || !student?._id || slots.length === 0) return;
-    (async () => {
-      try {
-        const res = await api.get(`/session/student/${student._id}`, {
-          withCredentials: true,
-        });
-        const raw = res.data;
-        const normalised = Array.isArray(raw)
-          ? raw
-          : Array.isArray(raw?.sessions)
-            ? raw.sessions
-            : raw?._id
-              ? [raw]
-              : [];
+  // Fetch sessions
+  const fetchSessions = useCallback(async () => {
+    if (!teacherId || !student?._id) return;
+
+    try {
+      const res = await api.get(`/session/student/${student._id}`, {
+        withCredentials: true,
+      });
+
+      const raw = res.data;
+      const normalised = Array.isArray(raw)
+        ? raw
+        : Array.isArray(raw?.sessions)
+          ? raw.sessions
+          : raw?._id
+            ? [raw]
+            : [];
+
+      if (isMounted.current) {
         setSessions(normalised);
-      } catch {
+      }
+    } catch (err) {
+      console.error("Error fetching sessions:", err);
+      if (isMounted.current) {
         setSessions([]);
       }
-    })();
-  }, [id, student, slots]);
+    }
+  }, [teacherId, student?._id]);
 
-  const getSessionsForSlot = (slotId) =>
-    sessions.filter((s) => s.slot_id === slotId);
+  // Refresh all data
+  const refreshData = useCallback(async () => {
+    setRefreshing(true);
+    await Promise.all([fetchSlots(), fetchSessions()]);
+    setRefreshing(false);
+  }, [fetchSlots, fetchSessions]);
+
+  // Initial data fetch
+  useEffect(() => {
+    if (teacherId) {
+      fetchSlots();
+      if (student?._id) {
+        fetchSessions();
+      }
+    }
+  }, [teacherId, student?._id, fetchSlots, fetchSessions]);
+
+  // Real-time socket listeners
+  useEffect(() => {
+    if (!teacherId || !socket) return;
+
+    const handleNewSessionRequest = (data) => {
+      const { session, slot, teacher_id, student_id } = data;
+
+      if (teacher_id === teacherId && student_id === student?._id) {
+        setSessions((prev) => {
+          if (prev.find((s) => s._id === session._id)) return prev;
+          return [...prev, session];
+        });
+
+        if (slot) {
+          setSlots((prev) => prev.map((s) => (s._id === slot._id ? slot : s)));
+        }
+      }
+    };
+
+    const handleSlotUpdate = (updatedSlot) => {
+      if (updatedSlot.teacher_id === teacherId) {
+        setSlots((prev) =>
+          prev.map((s) => (s._id === updatedSlot._id ? updatedSlot : s)),
+        );
+      }
+    };
+
+    const handleSlotDeletedWithSessions = (data) => {
+      const { slotId, teacherId: deletedTeacherId, sessionIds } = data;
+      if (deletedTeacherId === teacherId) {
+        setSlots((prev) => prev.filter((s) => s._id !== slotId));
+        setSessions((prev) => prev.filter((s) => !sessionIds.includes(s._id)));
+      }
+    };
+
+    const handleNewSlot = (data) => {
+      const { slot, teacherId: slotTeacherId } = data;
+      if (slotTeacherId === teacherId) {
+        setSlots((prev) => {
+          if (prev.find((s) => s._id === slot._id)) return prev;
+          return [...prev, slot];
+        });
+      }
+    };
+
+    const handleDeleteSlot = (data) => {
+      const { id: slotId, teacherId: deletedTeacherId } = data;
+      if (deletedTeacherId === teacherId) {
+        setSlots((prev) => prev.filter((s) => s._id !== slotId));
+      }
+    };
+
+    socket.on("new_session_request", handleNewSessionRequest);
+    socket.on("slot_update", handleSlotUpdate);
+    socket.on("slot_deleted_with_sessions", handleSlotDeletedWithSessions);
+    socket.on("new_slot", handleNewSlot);
+    socket.on("delete_slot", handleDeleteSlot);
+
+    return () => {
+      socket.off("new_session_request", handleNewSessionRequest);
+      socket.off("slot_update", handleSlotUpdate);
+      socket.off("slot_deleted_with_sessions", handleSlotDeletedWithSessions);
+      socket.off("new_slot", handleNewSlot);
+      socket.off("delete_slot", handleDeleteSlot);
+    };
+  }, [teacherId, student?._id]);
+
+  const getSessionsForSlot = (slotId) => {
+    return sessions.filter((s) => s.slot_id === slotId);
+  };
 
   const bookSlot = async (slotId, slot, blockStartTime) => {
     if (!student) {
       alert("Please login to book a slot");
       return;
     }
+
+    const blockId = `${slotId}-${blockStartTime}`;
+    setBookingId(blockId);
+
+    const optimisticSession = {
+      _id: `optimistic_${Date.now()}`,
+      slot_id: slotId,
+      student_id: student._id,
+      teacher_id: teacherId,
+      status: "pending",
+      requested_time: new Date(`${slot.date}T${blockStartTime}`).toISOString(),
+      _isOptimistic: true,
+    };
+
+    setSessions((prev) => [...prev, optimisticSession]);
+    setSlots((prev) =>
+      prev.map((s) =>
+        s._id === slotId
+          ? { ...s, is_booked: true, booked_by: student._id }
+          : s,
+      ),
+    );
+
     try {
-      const blockId = `${slotId}-${blockStartTime}`;
-      setBookingId(blockId);
       const requestedTimeIso = new Date(
         `${slot.date}T${blockStartTime}`,
       ).toISOString();
+
       const res = await api.put(`/session/book/${slotId}`, {
         student_id: student._id,
-        teacher_id: id,
+        teacher_id: teacherId,
         duration: 15,
         requested_time: requestedTimeIso,
       });
+
       const newSession = res.data?.session;
-      if (newSession) setSessions((prev) => [...prev, newSession]);
-      setSlots((prev) => [...prev]);
+      const updatedSlot = res.data?.slot;
+
+      setSessions((prev) =>
+        prev
+          .map((s) => (s._id === optimisticSession._id ? newSession : s))
+          .filter((s) => s._id !== optimisticSession._id || s === newSession),
+      );
+
+      if (updatedSlot) {
+        setSlots((prev) =>
+          prev.map((s) => (s._id === slotId ? updatedSlot : s)),
+        );
+      }
     } catch (err) {
+      console.error("Booking error:", err);
+      setSessions((prev) =>
+        prev.filter((s) => s._id !== optimisticSession._id),
+      );
+      setSlots((prev) =>
+        prev.map((s) =>
+          s._id === slotId ? { ...s, is_booked: false, booked_by: null } : s,
+        ),
+      );
       alert(err.response?.data?.message || "Failed to book slot.");
     } finally {
       setBookingId(null);
@@ -187,33 +342,33 @@ const TeacherDetail = () => {
   const toggleDateCollapse = (dateKey) =>
     setCollapsedDates((prev) => ({ ...prev, [dateKey]: !prev[dateKey] }));
 
-  const filtered =
-    filter === "available"
-      ? slots.filter((s) => !s.is_booked)
-      : filter === "booked"
-        ? slots.filter((s) => s.is_booked)
-        : slots;
+  const filteredSlots = slots.filter((slot) => {
+    if (filter === "available" && slot.is_booked) return false;
+    if (filter === "booked" && !slot.is_booked) return false;
+    return true;
+  });
 
-  const grouped = groupSlotsByDate(filtered);
+  const grouped = groupSlotsByDate(filteredSlots);
   const totalAvailable = slots.filter((s) => !s.is_booked).length;
   const totalBooked = slots.filter((s) => s.is_booked).length;
   const sortedDates = Object.keys(grouped).sort(
     (a, b) => new Date(a) - new Date(b),
   );
 
-  // ── Loading ──
-  if (loading)
+  if (loading && slots.length === 0) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="w-10 h-10 border-2 border-gray-200 border-t-gray-900 rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-sm text-gray-400 font-medium">Loading sessions…</p>
+          <div className="w-10 h-10 border-2 border-gray-200 border-t-blue-600 rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-sm text-gray-400 font-medium">
+            Loading availability...
+          </p>
         </div>
       </div>
     );
+  }
 
-  // ── Error ──
-  if (error)
+  if (error) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
         <div className="max-w-sm w-full bg-white border border-gray-100 rounded-2xl p-8 shadow-sm text-center">
@@ -224,32 +379,54 @@ const TeacherDetail = () => {
             Something went wrong
           </h3>
           <p className="text-gray-400 text-sm mb-5">{error}</p>
-          <Link
-            href="/dashboard"
-            className="inline-flex items-center gap-2 text-sm font-semibold text-blue-600 hover:underline"
-          >
-            <ArrowLeft className="h-4 w-4" /> Back to Dashboard
-          </Link>
+          <div className="flex gap-3 justify-center">
+            <button
+              onClick={refreshData}
+              className="px-4 py-2 bg-gray-900 text-white text-sm font-bold rounded-xl hover:bg-gray-800 transition-all flex items-center gap-2"
+            >
+              <RefreshCw className="h-4 w-4" />
+              Retry
+            </button>
+            <Link
+              href="/dashboard"
+              className="inline-flex items-center gap-2 text-sm font-semibold text-blue-600 hover:underline"
+            >
+              <ArrowLeft className="h-4 w-4" /> Back to Dashboard
+            </Link>
+          </div>
         </div>
       </div>
     );
+  }
 
-  // ── Main ──
   return (
     <div className="min-h-screen bg-gray-50">
       <style>{`.scrollbar-none::-webkit-scrollbar{display:none}.scrollbar-none{-ms-overflow-style:none;scrollbar-width:none}`}</style>
-      <div className=" ">
-        {/* Back link */}
-        <Link
-          href="/dashboard"
-          className="inline-flex items-center gap-2 text-sm text-gray-400 hover:text-gray-900 font-semibold transition-colors group mb-6"
-        >
-          <ArrowLeft className="h-4 w-4 group-hover:-translate-x-0.5 transition-transform" />
-          Back to Dashboard
-        </Link>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
+        {/* Header with refresh */}
+        <div className="flex items-center justify-between mb-6">
+          <Link
+            href="/dashboard"
+            className="inline-flex items-center gap-2 text-sm text-gray-400 hover:text-gray-900 font-semibold transition-colors group"
+          >
+            <ArrowLeft className="h-4 w-4 group-hover:-translate-x-0.5 transition-transform" />
+            Back to Dashboard
+          </Link>
+
+          <button
+            onClick={refreshData}
+            disabled={refreshing}
+            className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all disabled:opacity-50"
+            title="Refresh"
+          >
+            <RefreshCw
+              className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`}
+            />
+          </button>
+        </div>
 
         {/* Page header */}
-        <div className="bg-blue-600 rounded-2xl px-7 py-8 mb-6 relative overflow-hidden shadow-xl shadow-blue-100">
+        <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-2xl px-7 py-8 mb-6 relative overflow-hidden shadow-xl shadow-blue-100">
           <div
             className="absolute inset-0 opacity-[0.06]"
             style={{
@@ -265,7 +442,7 @@ const TeacherDetail = () => {
                 <GraduationCap className="h-5 w-5 text-white" />
               </div>
               <div>
-                <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-0.5">
+                <p className="text-xs font-semibold text-blue-100 uppercase tracking-widest mb-0.5">
                   1:1 Sessions
                 </p>
                 <h1 className="text-xl font-bold text-white tracking-tight">
@@ -292,10 +469,10 @@ const TeacherDetail = () => {
 
         {/* Body grid */}
         <div className="flex flex-col lg:flex-row gap-5">
-          {/* ── Sidebar ── */}
+          {/* Sidebar */}
           <aside className="w-full lg:w-64 flex-shrink-0 space-y-4">
             {/* Session info */}
-            <div className="bg-white rounded-2xl border border-gray-100 p-5">
+            <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
               <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4">
                 Session Info
               </p>
@@ -303,8 +480,8 @@ const TeacherDetail = () => {
                 {[
                   {
                     icon: User,
-                    label: "Teacher ID",
-                    value: `${id.slice(0, 10)}…`,
+                    label: "Teacher",
+                    value: `${teacherId?.slice(0, 10) || "Unknown"}…`,
                   },
                   { icon: Video, label: "Format", value: "Online Video Call" },
                   { icon: Clock, label: "Duration", value: "15 min / slot" },
@@ -327,8 +504,8 @@ const TeacherDetail = () => {
               </div>
             </div>
 
-            {/* Filters — collapsible on mobile */}
-            <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+            {/* Filters */}
+            <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
               <button
                 onClick={() => setFilterOpen(!filterOpen)}
                 className="w-full flex items-center justify-between px-5 py-4 lg:cursor-default"
@@ -340,14 +517,17 @@ const TeacherDetail = () => {
                   </p>
                 </div>
                 <ChevronDown
-                  className={`h-4 w-4 text-gray-300 lg:hidden transition-transform ${filterOpen ? "rotate-180" : ""}`}
+                  className={`h-4 w-4 text-gray-300 lg:hidden transition-transform ${
+                    filterOpen ? "rotate-180" : ""
+                  }`}
                 />
               </button>
 
               <div
-                className={`px-5 pb-5 space-y-4 lg:block ${filterOpen ? "block" : "hidden"}`}
+                className={`px-5 pb-5 space-y-4 lg:block ${
+                  filterOpen ? "block" : "hidden"
+                }`}
               >
-                {/* Status tabs */}
                 <div className="flex bg-gray-50 rounded-xl p-1 gap-1 border border-gray-100">
                   {[
                     {
@@ -371,7 +551,7 @@ const TeacherDetail = () => {
                       onClick={() => setFilter(opt.key)}
                       className={`flex-1 px-2 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${
                         filter === opt.key
-                          ? "bg-blue-600 text-white shadow-md shadow-blue-100 border border-blue-500"
+                          ? "bg-blue-600 text-white shadow-md shadow-blue-100"
                           : "text-gray-400 hover:text-blue-600"
                       }`}
                     >
@@ -380,7 +560,6 @@ const TeacherDetail = () => {
                   ))}
                 </div>
 
-                {/* Toggle */}
                 <label className="flex items-center justify-between cursor-pointer py-1">
                   <span className="text-sm font-semibold text-gray-700">
                     Show booked
@@ -393,74 +572,79 @@ const TeacherDetail = () => {
                       className="sr-only"
                     />
                     <div
-                      className={`w-9 h-5 rounded-full transition-colors ${showBooked ? "bg-blue-600" : "bg-gray-200"}`}
+                      className={`w-9 h-5 rounded-full transition-colors ${
+                        showBooked ? "bg-blue-600" : "bg-gray-200"
+                      }`}
                     >
                       <div
-                        className={`absolute w-3.5 h-3.5 bg-white rounded-full shadow-sm transition-transform top-[3px] ${showBooked ? "translate-x-[18px]" : "translate-x-[3px]"}`}
+                        className={`absolute w-3.5 h-3.5 bg-white rounded-full shadow-sm transition-transform top-[3px] ${
+                          showBooked
+                            ? "translate-x-[18px]"
+                            : "translate-x-[3px]"
+                        }`}
                       />
                     </div>
                   </div>
                 </label>
 
-                {/* Date pills */}
-                <div>
-                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">
-                    By Date
-                  </p>
-                  <div className="flex flex-wrap gap-1.5">
-                    <button
-                      onClick={() => setSelectedDate(null)}
-                      className={`px-2.5 py-1 rounded-full text-xs font-semibold transition-all ${
-                        !selectedDate
-                          ? "bg-blue-600 text-white shadow-md shadow-blue-100"
-                          : "bg-gray-50 text-gray-500 border border-gray-200 hover:border-blue-200"
-                      }`}
-                    >
-                      All
-                    </button>
-                    {sortedDates.map((dateKey) => {
-                      const d = formatDate(dateKey);
-                      const label = d.isToday
-                        ? "Today"
-                        : d.isTomorrow
-                          ? "Tomorrow"
-                          : d.short;
-                      return (
-                        <button
-                          key={dateKey}
-                          onClick={() => setSelectedDate(dateKey)}
-                          className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${
-                            selectedDate === dateKey
-                              ? "bg-blue-600 text-white shadow-md shadow-blue-100"
-                              : "bg-gray-50 text-gray-500 border border-gray-200 hover:border-blue-200"
-                          }`}
-                        >
-                          {label}
-                        </button>
-                      );
-                    })}
+                {sortedDates.length > 0 && (
+                  <div>
+                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">
+                      By Date
+                    </p>
+                    <div className="flex flex-wrap gap-1.5">
+                      <button
+                        onClick={() => setSelectedDate(null)}
+                        className={`px-2.5 py-1 rounded-full text-xs font-semibold transition-all ${
+                          !selectedDate
+                            ? "bg-blue-600 text-white shadow-md shadow-blue-100"
+                            : "bg-gray-50 text-gray-500 border border-gray-200 hover:border-blue-200"
+                        }`}
+                      >
+                        All
+                      </button>
+                      {sortedDates.map((dateKey) => {
+                        const d = formatDate(dateKey);
+                        const label = d.isToday
+                          ? "Today"
+                          : d.isTomorrow
+                            ? "Tomorrow"
+                            : d.short;
+                        return (
+                          <button
+                            key={dateKey}
+                            onClick={() => setSelectedDate(dateKey)}
+                            className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${
+                              selectedDate === dateKey
+                                ? "bg-blue-600 text-white shadow-md shadow-blue-100"
+                                : "bg-gray-50 text-gray-500 border border-gray-200 hover:border-blue-200"
+                            }`}
+                          >
+                            {label}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
             </div>
           </aside>
 
-          {/* ── Slots Panel ── */}
+          {/* Slots Panel */}
           <div className="flex-1 min-w-0">
-            <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
-              {/* Panel header */}
+            <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
               <div className="flex items-center gap-3 px-6 py-4 border-b border-gray-100">
                 <CalendarDays className="h-4 w-4 text-gray-400" />
                 <h2 className="text-sm font-bold text-gray-900">
                   Session Slots
                 </h2>
                 <span className="ml-auto px-2 py-0.5 bg-gray-100 text-gray-500 rounded-full text-xs font-bold">
-                  {filtered.length}
+                  {filteredSlots.length}
                 </span>
               </div>
 
               <div className="p-5">
-                {/* Empty — no slots */}
                 {slots.length === 0 && (
                   <div className="flex flex-col items-center justify-center py-20 text-center">
                     <div className="w-12 h-12 bg-gray-50 rounded-xl flex items-center justify-center mb-4 border border-gray-100">
@@ -470,12 +654,11 @@ const TeacherDetail = () => {
                       No Sessions Available
                     </h3>
                     <p className="text-xs text-gray-400 max-w-xs">
-                      Check back later for new availability.
+                      This teacher hasn't added any availability slots yet.
                     </p>
                   </div>
                 )}
 
-                {/* Empty — filters */}
                 {slots.length > 0 && sortedDates.length === 0 && (
                   <div className="flex flex-col items-center justify-center py-20 text-center">
                     <div className="w-12 h-12 bg-gray-50 rounded-xl flex items-center justify-center mb-4 border border-gray-100">
@@ -500,7 +683,6 @@ const TeacherDetail = () => {
                   </div>
                 )}
 
-                {/* Date groups */}
                 {sortedDates.length > 0 && (
                   <div className="space-y-3">
                     {sortedDates.map((dateKey, idx) => {
@@ -510,7 +692,9 @@ const TeacherDetail = () => {
                       const availSlots = dateSlots.filter((s) => !s.is_booked);
                       const bookedSlots = dateSlots.filter((s) => s.is_booked);
                       const isCollapsed = collapsedDates[dateKey];
+
                       if (!showBooked && availSlots.length === 0) return null;
+
                       const visible = showBooked
                         ? dateSlots
                         : dateSlots.filter((s) => !s.is_booked);
@@ -523,7 +707,6 @@ const TeacherDetail = () => {
                           transition={{ delay: idx * 0.05, duration: 0.25 }}
                           className="border border-gray-100 rounded-xl overflow-hidden"
                         >
-                          {/* Date row */}
                           <button
                             onClick={() => toggleDateCollapse(dateKey)}
                             className="w-full px-5 py-3.5 bg-white flex items-center justify-between hover:bg-gray-50 transition-colors"
@@ -568,7 +751,6 @@ const TeacherDetail = () => {
                             </div>
                           </button>
 
-                          {/* Slot cards */}
                           <AnimatePresence>
                             {!isCollapsed && (
                               <motion.div
@@ -579,7 +761,6 @@ const TeacherDetail = () => {
                                 className="overflow-hidden"
                               >
                                 <div className="border-t border-gray-100 bg-gray-50/50 p-4">
-                                  {/* Horizontal scrollable row */}
                                   <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-none snap-x snap-mandatory">
                                     {visible.map((slot) => (
                                       <div
@@ -608,7 +789,6 @@ const TeacherDetail = () => {
                                       </div>
                                     ))}
                                   </div>
-                                  {/* Scroll hint — only shows when more than 3 cards */}
                                   {visible.length > 3 && (
                                     <p className="text-[10px] text-gray-300 font-semibold uppercase tracking-widest text-right mt-2 pr-1">
                                       Scroll for more →

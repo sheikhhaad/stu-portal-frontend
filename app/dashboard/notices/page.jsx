@@ -6,6 +6,7 @@ import Loading from "@/component/Loading";
 import Error from "@/component/Error";
 import { motion } from "framer-motion";
 import { Bell, Calendar, Megaphone } from "lucide-react";
+import socket from "@/app/lib/socket";
 
 export default function NoticesPage() {
   const { student } = useStudent();
@@ -13,54 +14,73 @@ export default function NoticesPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
- const fetchAllNotices = async () => {
-  if (!student?._id) return;
+  const fetchAllNotices = async () => {
+    if (!student?._id) return;
+    console.log(socket);
 
-  try {
-    setLoading(true);
-    setError(null);
+    try {
+      setLoading(true);
+      setError(null);
 
-    // 1. get enrolled courses
-    const enrollmentRes = await api.get(
-      `/enrollments/student/${student._id}`
-    );
-    const courses = enrollmentRes.data.courses || [];
+      // 1. get enrolled courses
+      const enrollmentRes = await api.get(
+        `/enrollments/student/${student._id}`,
+      );
+      const courses = enrollmentRes.data.courses || [];
 
-    const courseIds = courses.map(c => c._id);
+      const courseIds = courses.map((c) => c._id);
 
-    // 2. get all announcements (single call)
-    const annRes = await api.get(`/announcements`);
-    const allAnnouncements = Array.isArray(annRes.data)
-      ? annRes.data
-      : [];
+      // 2. get all announcements (single call)
+      const annRes = await api.get(`/announcements`);
+      const allAnnouncements = Array.isArray(annRes.data) ? annRes.data : [];
 
-    // 3. filter by course_id
-    const filtered = allAnnouncements
-      .filter(ann => courseIds.includes(ann.course_id))
-      .map(ann => {
-        const course = courses.find(c => c._id === ann.course_id);
+      // 3. filter by course_id
+      const filtered = allAnnouncements
+        .filter((ann) => courseIds.includes(ann.course_id))
+        .map((ann) => {
+          const course = courses.find((c) => c._id === ann.course_id);
 
-        return {
-          ...ann,
-          courseName: course?.title || course?.name,
-        };
-      });
+          return {
+            ...ann,
+            courseName: course?.title || course?.name,
+          };
+        });
 
-    // 4. sort
-    filtered.sort(
-      (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
-    );
+      // 4. sort
+      filtered.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
-    setNotices(filtered);
-
-  } catch {
-    setError("Failed to load notices.");
-  } finally {
-    setLoading(false);
-  }
-};
+      setNotices(filtered);
+    } catch {
+      setError("Failed to load notices.");
+    } finally {
+      setLoading(false);
+    }
+  };
   useEffect(() => {
     fetchAllNotices();
+
+    // NEW announcement
+    socket.on("new_announcement", (data) => {
+      setNotices((prev) => [data, ...prev]);
+    });
+
+    // UPDATE
+    socket.on("update_announcement", (updated) => {
+      setNotices((prev) =>
+        prev.map((item) => (item._id === updated._id ? updated : item)),
+      );
+    });
+
+    // DELETE
+    socket.on("delete_announcement", ({ id }) => {
+      setNotices((prev) => prev.filter((item) => item._id !== id));
+    });
+
+    return () => {
+      socket.off("new_announcement");
+      socket.off("update_announcement");
+      socket.off("delete_announcement");
+    };
   }, [student]);
 
   if (loading) return <Loading message="Syncing your notices..." />;

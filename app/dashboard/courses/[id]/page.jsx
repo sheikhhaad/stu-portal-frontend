@@ -1,4 +1,6 @@
+// app/dashboard/courses/[id]/page.jsx
 "use client";
+
 import { useParams, useRouter } from "next/navigation";
 import { useStudent } from "@/app/context/StudentContext";
 import { useQueries } from "@/app/context/QueryContext";
@@ -21,9 +23,8 @@ import {
   ChevronDown,
   ChevronUp,
   CalendarDays,
-  Bell,
 } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import api from "@/app/lib/api";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -60,27 +61,32 @@ export default function CourseDetailPage() {
   const { id } = useParams();
   const router = useRouter();
   const { student } = useStudent();
-  const {
-    queries: allQueries,
-    fetchCourseQueries,
-    addQuery,
-    refreshQueries,
-  } = useQueries();
+  const { queries, fetchCourseQueries, addQuery, refreshQueries } =
+    useQueries();
 
   const [course, setCourse] = useState(null);
-  const [courseQueries, setCourseQueries] = useState([]);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [queriesLoading, setQueriesLoading] = useState(false);
+  const [isInitializing, setIsInitializing] = useState(true);
   const [expandedQueries, setExpandedQueries] = useState({});
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [queryText, setQueryText] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const [teacher, setTeacher] = useState(null);
-  const [teacherId, setTeacherId] = useState(null); // Add state for teacher_id
+  const [teacherId, setTeacherId] = useState(null);
 
-  // Fetch course enrollment and get teacher_id
+  // ✅ Derive course queries from context — auto-updates on socket events
+  // Consistent check using only student_id field
+  const courseQueries = useMemo(
+    () =>
+      queries.filter(
+        (q) => q.course_id === id && q.student_id === student?._id,
+      ),
+    [queries, id, student?._id],
+  );
+
+  // Fetch course enrollment
   useEffect(() => {
     if (!student || !id) return;
     (async () => {
@@ -93,7 +99,9 @@ export default function CourseDetailPage() {
         if (found) {
           setCourse(found);
           setError("");
-        } else setError("You are not enrolled in this course.");
+        } else {
+          setError("You are not enrolled in this course.");
+        }
       } catch {
         setError("Failed to load course information.");
       } finally {
@@ -102,78 +110,49 @@ export default function CourseDetailPage() {
     })();
   }, [student, id]);
 
-  // Fetch teacher_id from enrollment data
+  // Fetch teacher info
   useEffect(() => {
     if (!student || !id) return;
     (async () => {
       try {
-        // First, get the enrollment to find teacher_id
         const enrollmentRes = await api.get(`/enrollments/teacher/${id}`);
         const enrollment = enrollmentRes.data;
-
-        // Extract teacher_id from teacherEnrollments array
-        if (
-          enrollment?.teacherEnrollments &&
-          enrollment.teacherEnrollments.length > 0
-        ) {
+        if (enrollment?.teacherEnrollments?.length > 0) {
           const teacherEnrollment = enrollment.teacherEnrollments.find(
             (enroll) => enroll.course_id === id,
           );
-
-          if (teacherEnrollment && teacherEnrollment.teacher_id) {
+          if (teacherEnrollment?.teacher_id) {
             const extractedTeacherId = teacherEnrollment.teacher_id;
             setTeacherId(extractedTeacherId);
-
-            // Now fetch full teacher details using the teacher_id
             const teacherRes = await api.get(
               `/enrollments/teacher/info/${extractedTeacherId}`,
-              {
-                withCredentials: true,
-              },
+              { withCredentials: true },
             );
             setTeacher(teacherRes.data);
-            console.log("Teacher data:", teacherRes.data);
           }
         }
-      } catch (error) {
-        console.error("Failed to fetch teacher info:", error);
+      } catch (err) {
+        console.error("Failed to fetch teacher info:", err);
       }
     })();
   }, [student, id]);
 
-  // Fetch course queries
+  // ✅ Initial fetch to populate context — no local state needed after this
   useEffect(() => {
     if (!student || !id || !course) return;
     (async () => {
-      try {
-        setQueriesLoading(true);
-        const filtered = allQueries.filter(
-          (q) =>
-            q.course_id === id &&
-            (q.student_id === student._id || q.student === student._id),
-        );
-        if (filtered.length > 0) setCourseQueries(filtered);
-        else {
-          const fetched = await fetchCourseQueries(id);
-          setCourseQueries(fetched || []);
-        }
-      } catch {
-      } finally {
-        setQueriesLoading(false);
-      }
+      setIsInitializing(true);
+      await fetchCourseQueries(id);
+      setIsInitializing(false);
     })();
-  }, [student, id, course, allQueries, fetchCourseQueries]);
+  }, [student, id, course]);
 
   const handleSubmitQuery = async (e) => {
-    console.log(student);
-    console.log(course);
-    console.log(teacherId);
     e.preventDefault();
     if (!queryText.trim() || !student || !course || !teacherId) {
       setSubmitError("Missing required information. Please try again.");
       return;
     }
-
     setIsSubmitting(true);
     setSubmitError("");
     try {
@@ -183,16 +162,15 @@ export default function CourseDetailPage() {
           student_id: student._id,
           course_id: course._id,
           query: queryText.trim(),
-          teacher_id: teacherId, // Use the extracted teacher_id
+          teacher_id: teacherId,
         },
         { withCredentials: true },
       );
       const newQuery = res.data.query || res.data;
-      if (addQuery) addQuery(newQuery);
-      setCourseQueries((prev) => [newQuery, ...prev]);
+      addQuery(newQuery); // ✅ adds to context, courseQueries recomputes via useMemo
       setIsModalOpen(false);
       setQueryText("");
-      if (refreshQueries) refreshQueries();
+      // ✅ no need for refreshQueries here — addQuery already updated context
     } catch (err) {
       setSubmitError(err.response?.data?.msg || "Failed to submit query.");
     } finally {
@@ -205,7 +183,11 @@ export default function CourseDetailPage() {
     setExpandedQueries((prev) => ({ ...prev, [queryId]: !prev[queryId] }));
   };
 
-  // Loading and error states
+  // ✅ Safe teacher name helper — handles both response shapes
+  const getTeacherName = () =>
+    teacher?.teacher?.name || teacher?.name || "Faculty Member";
+  const getTeacherInitial = () => getTeacherName()[0]?.toUpperCase() || "F";
+
   if (!student)
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -270,7 +252,8 @@ export default function CourseDetailPage() {
               className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 hover:border-gray-400 text-gray-700 text-sm font-semibold rounded-xl transition-all"
             >
               <CalendarDays className="h-3.5 w-3.5" />
-              Book session with {teacher?.teacher?.name}
+              {/* ✅ consistent teacher name via helper */}
+              Book session with {getTeacherName()}
             </button>
           )}
         </div>
@@ -301,7 +284,8 @@ export default function CourseDetailPage() {
                 <div className="flex items-center gap-3 mt-1">
                   <span className="flex items-center gap-1.5 text-xs text-blue-100 font-medium">
                     <User className="h-3 w-3" />
-                    {teacher ? teacher.name : "Faculty Member"}
+                    {/* ✅ consistent name helper */}
+                    {getTeacherName()}
                   </span>
                   <span className="flex items-center gap-1.5 text-xs text-blue-100 font-medium">
                     <Hash className="h-3 w-3" />
@@ -310,6 +294,7 @@ export default function CourseDetailPage() {
                 </div>
               </div>
             </div>
+
             {/* Mini stats */}
             <div className="flex gap-3 shrink-0">
               <div className="bg-white/10 border border-white/20 rounded-xl px-4 py-2.5 text-center min-w-[64px]">
@@ -338,9 +323,8 @@ export default function CourseDetailPage() {
 
         {/* Body */}
         <div className="flex flex-col lg:flex-row gap-5">
-          {/* ── Sidebar ── */}
+          {/* Sidebar */}
           <aside className="w-full lg:w-64 shrink-0 space-y-4">
-            {/* Schedule */}
             <div className="bg-white rounded-2xl border border-gray-100 p-5">
               <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-4">
                 Schedule
@@ -376,10 +360,9 @@ export default function CourseDetailPage() {
             </div>
           </aside>
 
-          {/* ── Queries Panel ── */}
+          {/* Queries Panel */}
           <div className="flex-1 min-w-0">
             <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
-              {/* Panel header */}
               <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
                 <div className="flex items-center gap-3">
                   <MessageSquare className="h-4 w-4 text-gray-400" />
@@ -400,7 +383,7 @@ export default function CourseDetailPage() {
               </div>
 
               <div className="p-5 min-h-[360px]">
-                {queriesLoading ? (
+                {isInitializing ? (
                   <div className="flex flex-col items-center justify-center py-20 gap-3">
                     <div className="w-8 h-8 border-2 border-gray-200 border-t-gray-900 rounded-full animate-spin" />
                     <p className="text-xs text-gray-400 font-medium">
@@ -426,7 +409,6 @@ export default function CourseDetailPage() {
                               : "border-gray-100 hover:border-gray-200"
                           }`}
                         >
-                          {/* Query row */}
                           <div
                             className="px-5 py-4 bg-white cursor-pointer flex items-start justify-between gap-4 group"
                             onClick={(e) => toggleAnswer(query._id, e)}
@@ -479,7 +461,7 @@ export default function CourseDetailPage() {
                             </div>
                           </div>
 
-                          {/* Expanded answer */}
+                          {/* Expanded answer — updates live via socket */}
                           <AnimatePresence>
                             {isExpanded && (
                               <motion.div
@@ -494,11 +476,13 @@ export default function CourseDetailPage() {
                                     <div className="mt-4 bg-white rounded-xl p-4 border border-gray-100">
                                       <div className="flex items-center gap-2.5 mb-3">
                                         <div className="w-7 h-7 rounded-lg bg-gray-900 flex items-center justify-center text-[10px] font-bold text-white uppercase shrink-0">
-                                          {teacher ? teacher.teacher.name[0] : "F"}
+                                          {/* ✅ consistent initial helper */}
+                                          {getTeacherInitial()}
                                         </div>
                                         <div>
                                           <p className="text-xs font-bold text-gray-900">
-                                            {teacher ? teacher.teacher.name : "Faculty"}
+                                            {/* ✅ consistent name helper */}
+                                            {getTeacherName()}
                                           </p>
                                           <p className="text-[10px] text-gray-400">
                                             Faculty Response
@@ -516,7 +500,9 @@ export default function CourseDetailPage() {
                                           <div
                                             key={d}
                                             className="w-1.5 h-1.5 bg-gray-300 rounded-full animate-bounce"
-                                            style={{ animationDelay: `${d}ms` }}
+                                            style={{
+                                              animationDelay: `${d}ms`,
+                                            }}
                                           />
                                         ))}
                                       </div>
@@ -559,7 +545,7 @@ export default function CourseDetailPage() {
         </div>
       </div>
 
-      {/* ── Query Modal ── */}
+      {/* Query Modal */}
       <AnimatePresence>
         {isModalOpen && (
           <>
@@ -578,7 +564,6 @@ export default function CourseDetailPage() {
               className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none"
             >
               <div className="bg-white rounded-2xl shadow-xl w-full max-w-md pointer-events-auto border border-gray-100 overflow-hidden">
-                {/* Modal header */}
                 <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
                   <div>
                     <h3 className="text-sm font-bold text-gray-900">
@@ -596,7 +581,6 @@ export default function CourseDetailPage() {
                   </button>
                 </div>
 
-                {/* Modal body */}
                 <form onSubmit={handleSubmitQuery} className="p-6">
                   <div className="mb-4">
                     <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">
