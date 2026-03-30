@@ -1,7 +1,7 @@
 import { io } from "socket.io-client";
 
 // backend port jo socket server pe run ho raha hai
-const socket = io("http://localhost:8000", {
+const socket = io("https://stu-portal-backend.vercel.app", {
   transports: ["websocket", "polling"], // ensures connection
 });
 
