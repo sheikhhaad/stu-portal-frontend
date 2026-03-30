@@ -22,7 +22,6 @@ export function StudentProvider({ children }) {
           return;
         }
         const res = await api.get("/auth/student/me");
-        console.log(res.data);
         setStudent(res.data.student);
       } catch (err) {
         router.push("/auth/login");

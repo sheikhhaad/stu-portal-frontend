@@ -1,5 +1,7 @@
 import { StudentProvider } from "./context/StudentContext";
 import { QueryProvider } from "./context/QueryContext";
+import { EnrollMentProvider } from "./context/TeacherEnroll";
+import { ChatProvider } from "./context/ChatContext";
 import "./globals.css";
 
 export const metadata = {
@@ -12,7 +14,11 @@ export default function RootLayout({ children }) {
     <html lang="en">
       <body className="antialiased">
         <StudentProvider>
-          <QueryProvider>{children}</QueryProvider>
+          <EnrollMentProvider>
+            <QueryProvider>
+              <ChatProvider>{children}</ChatProvider>
+            </QueryProvider>
+          </EnrollMentProvider>
         </StudentProvider>
       </body>
     </html>

@@ -6,6 +6,7 @@ import {
   LogOut,
   X,
   ClipboardList,
+  MessageSquare,
 } from "lucide-react";
 import { useStudent } from "@/app/context/StudentContext";
 import { usePathname, useRouter } from "next/navigation";
@@ -14,6 +15,7 @@ import { motion, AnimatePresence } from "framer-motion";
 const NAV_ITEMS = [
   { icon: LayoutDashboard, label: "Dashboard", href: "/dashboard" },
   { icon: ClipboardList, label: "Notices", href: "/dashboard/notices" },
+  { icon: MessageSquare, label: "Chat", href: "/dashboard/chat" },
 ];
 
 export default function Sidebar({ isOpen, setIsOpen, mobile = false }) {

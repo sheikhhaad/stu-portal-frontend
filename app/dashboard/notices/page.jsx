@@ -13,60 +13,52 @@ export default function NoticesPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  const fetchAllNotices = async () => {
-    if (!student) return;
-    try {
-      setLoading(true);
-      setError(null);
+ const fetchAllNotices = async () => {
+  if (!student?._id) return;
 
-      const enrollmentRes = await api.get(
-        `/enrollments/student/${student._id}`,
-      );
-      const courses = enrollmentRes.data.courses || [];
-      const allAnnouncements = [];
+  try {
+    setLoading(true);
+    setError(null);
 
-      await Promise.all(
-        courses.map(async (course) => {
-          try {
-            const teacherRes = await api.get(`/auth/teacher/${course._id}`);
-            const teacher = teacherRes.data.teacher;
-            if (teacher) {
-              const annRes = await api.get(
-                `/announcements/${teacher._id}/course/${course._id}`,
-              );
-              const announcements = Array.isArray(annRes.data)
-                ? annRes.data
-                : [];
-              announcements.forEach((ann) => {
-                allAnnouncements.push({
-                  ...ann,
-                  courseName: course.title || course.name,
-                  teacherName: teacher.name,
-                });
-              });
-            }
-          } catch (err) {
-            console.error(
-              `Error fetching notices for course ${course._id}:`,
-              err,
-            );
-          }
-        }),
-      );
+    // 1. get enrolled courses
+    const enrollmentRes = await api.get(
+      `/enrollments/student/${student._id}`
+    );
+    const courses = enrollmentRes.data.courses || [];
 
-      allAnnouncements.sort(
-        (a, b) => new Date(b.createdAt) - new Date(a.createdAt),
-      );
-      setNotices(allAnnouncements);
-    } catch {
-      setError(
-        "Failed to load notices. Please check your connection and try again.",
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
+    const courseIds = courses.map(c => c._id);
 
+    // 2. get all announcements (single call)
+    const annRes = await api.get(`/announcements`);
+    const allAnnouncements = Array.isArray(annRes.data)
+      ? annRes.data
+      : [];
+
+    // 3. filter by course_id
+    const filtered = allAnnouncements
+      .filter(ann => courseIds.includes(ann.course_id))
+      .map(ann => {
+        const course = courses.find(c => c._id === ann.course_id);
+
+        return {
+          ...ann,
+          courseName: course?.title || course?.name,
+        };
+      });
+
+    // 4. sort
+    filtered.sort(
+      (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
+    );
+
+    setNotices(filtered);
+
+  } catch {
+    setError("Failed to load notices.");
+  } finally {
+    setLoading(false);
+  }
+};
   useEffect(() => {
     fetchAllNotices();
   }, [student]);

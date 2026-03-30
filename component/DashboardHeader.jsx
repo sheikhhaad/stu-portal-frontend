@@ -1,10 +1,9 @@
 "use client";
-import { Menu, Bell } from "lucide-react";
+import { Menu, Bell, LogOut } from "lucide-react";
 import { useStudent } from "@/app/context/StudentContext";
-import NotificationBell from "@/component/NotificationBell";
 
 export default function DashboardHeader({ onMenuClick }) {
-  const { student } = useStudent();
+  const { student, logout } = useStudent();
 
   const getGreeting = () => {
     const h = new Date().getHours();
@@ -25,16 +24,18 @@ export default function DashboardHeader({ onMenuClick }) {
           <Menu className="w-5 h-5" />
         </button>
         <div>
-          <p className="text-[10px] text-gray-500 font-semibold uppercase tracking-wider mb-0.5">{getGreeting()}</p>
+          <p className="text-[10px] text-gray-500 font-semibold uppercase tracking-wider mb-0.5">
+            {getGreeting()}
+          </p>
           <h1 className="text-lg font-bold text-gray-900 tracking-tight">
-            {firstName} <span className="inline-block animate-bounce-slow">👋</span>
+            {firstName}{" "}
+            <span className="inline-block animate-bounce-slow">👋</span>
           </h1>
         </div>
       </div>
-      
-      <div className="flex items-center gap-3">
-        {/* We can use the existing NotificationBell or a simplified version */}
-        <NotificationBell />
+
+      <div className="cursor-pointer hover:text-red-500" onClick={logout}>
+        <LogOut />
       </div>
     </header>
   );

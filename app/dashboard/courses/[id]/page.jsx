@@ -78,18 +78,10 @@ export default function CourseDetailPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const [teacher, setTeacher] = useState(null);
-  const [teacherAnnouncements, setTeacherAnnouncements] = useState([]);
+  const [teacherId, setTeacherId] = useState(null); // Add state for teacher_id
+  console.log(teacher);
 
-  useEffect(() => {
-    if (!teacher) return;
-    (async () => {
-      try {
-        const res = await api.get(`/announcements/${teacher._id}/course/${id}`);
-        setTeacherAnnouncements(Array.isArray(res.data) ? res.data : []);
-      } catch { }
-    })();
-  }, [teacher]);
-
+  // Fetch course enrollment and get teacher_id
   useEffect(() => {
     if (!student || !id) return;
     (async () => {
@@ -111,18 +103,46 @@ export default function CourseDetailPage() {
     })();
   }, [student, id]);
 
+  // Fetch teacher_id from enrollment data
   useEffect(() => {
     if (!student || !id) return;
     (async () => {
       try {
-        const res = await api.get(`/auth/teacher/${id}`, {
-          withCredentials: true,
-        });
-        setTeacher(res.data.teacher);
-      } catch { }
+        // First, get the enrollment to find teacher_id
+        const enrollmentRes = await api.get(`/enrollments/teacher/${id}`);
+        const enrollment = enrollmentRes.data;
+
+        // Extract teacher_id from teacherEnrollments array
+        if (
+          enrollment?.teacherEnrollments &&
+          enrollment.teacherEnrollments.length > 0
+        ) {
+          const teacherEnrollment = enrollment.teacherEnrollments.find(
+            (enroll) => enroll.course_id === id,
+          );
+
+          if (teacherEnrollment && teacherEnrollment.teacher_id) {
+            const extractedTeacherId = teacherEnrollment.teacher_id;
+            setTeacherId(extractedTeacherId);
+
+            // Now fetch full teacher details using the teacher_id
+            const teacherRes = await api.get(
+              `/enrollments/teacher/info/${extractedTeacherId}`,
+              {
+                withCredentials: true,
+              },
+            );
+            setTeacher(teacherRes.data);
+            console.log("Teacher data:", teacherRes.data);
+          }
+        }
+      } catch (error) {
+        console.error("Failed to fetch teacher info:", error);
+      }
     })();
   }, [student, id]);
 
+  // Fetch course queries
   useEffect(() => {
     if (!student || !id || !course) return;
     (async () => {
@@ -146,8 +166,15 @@ export default function CourseDetailPage() {
   }, [student, id, course, allQueries, fetchCourseQueries]);
 
   const handleSubmitQuery = async (e) => {
+    console.log(student);
+    console.log(course);
+    console.log(teacherId);
     e.preventDefault();
-    if (!queryText.trim() || !student || !course || !teacher) return;
+    if (!queryText.trim() || !student || !course || !teacherId) {
+      setSubmitError("Missing required information. Please try again.");
+      return;
+    }
+
     setIsSubmitting(true);
     setSubmitError("");
     try {
@@ -157,7 +184,7 @@ export default function CourseDetailPage() {
           student_id: student._id,
           course_id: course._id,
           query: queryText.trim(),
-          teacher_id: teacher._id,
+          teacher_id: teacherId, // Use the extracted teacher_id
         },
         { withCredentials: true },
       );
@@ -179,7 +206,7 @@ export default function CourseDetailPage() {
     setExpandedQueries((prev) => ({ ...prev, [queryId]: !prev[queryId] }));
   };
 
-  // ── States ──
+  // Loading and error states
   if (!student)
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -228,7 +255,7 @@ export default function CourseDetailPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className=" mx-auto ">
+      <div className="mx-auto">
         {/* Nav row */}
         <div className="flex items-center flex-wrap gap-2 justify-between mb-6">
           <Link
@@ -238,13 +265,13 @@ export default function CourseDetailPage() {
             <ArrowLeft className="h-4 w-4 group-hover:-translate-x-0.5 transition-transform" />
             Dashboard
           </Link>
-          {teacher && (
+          {teacher && teacherId && (
             <button
-              onClick={() => router.push(`/dashboard/teacher/${teacher._id}`)}
+              onClick={() => router.push(`/dashboard/teacher/${teacherId}`)}
               className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 hover:border-gray-400 text-gray-700 text-sm font-semibold rounded-xl transition-all"
             >
               <CalendarDays className="h-3.5 w-3.5" />
-              Book session with {teacher.name}
+              Book session with {teacher?.teacher?.name}
             </button>
           )}
         </div>
@@ -394,10 +421,11 @@ export default function CourseDetailPage() {
                           initial={{ opacity: 0, y: 6 }}
                           animate={{ opacity: 1, y: 0 }}
                           transition={{ delay: idx * 0.04, duration: 0.2 }}
-                          className={`border rounded-xl overflow-hidden transition-all ${isExpanded
-                            ? "border-gray-300"
-                            : "border-gray-100 hover:border-gray-200"
-                            }`}
+                          className={`border rounded-xl overflow-hidden transition-all ${
+                            isExpanded
+                              ? "border-gray-300"
+                              : "border-gray-100 hover:border-gray-200"
+                          }`}
                         >
                           {/* Query row */}
                           <div
@@ -435,7 +463,7 @@ export default function CourseDetailPage() {
                                     `/dashboard/my-query/${query._id}`,
                                   );
                                 }}
-                                className="p-1.5 text-gray-300 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-all "
+                                className="p-1.5 text-gray-300 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-all"
                               >
                                 <MessageSquare className="h-3.5 w-3.5" />
                               </button>
