@@ -16,7 +16,6 @@ export default function NoticesPage() {
 
   const fetchAllNotices = async () => {
     if (!student?._id) return;
-    console.log(socket);
 
     try {
       setLoading(true);
@@ -56,6 +55,13 @@ export default function NoticesPage() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    socket.on("receiveNotification", (data) => {
+      console.log("New Notification:", data);
+    });
+  }, []);
+
   useEffect(() => {
     fetchAllNotices();
 
