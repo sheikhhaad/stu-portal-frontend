@@ -176,6 +176,7 @@ export default function CourseDetailPage() {
     } finally {
       setIsSubmitting(false);
     }
+    fetchCourseQueries(id);
   };
 
   const toggleAnswer = (queryId, e) => {
@@ -438,24 +439,13 @@ export default function CourseDetailPage() {
                             </div>
                             <div className="flex items-center gap-1 shrink-0 mt-0.5">
                               <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  router.push(
-                                    `/dashboard/my-query/${query._id}`,
-                                  );
-                                }}
-                                className="p-1.5 text-gray-300 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-all"
-                              >
-                                <MessageSquare className="h-3.5 w-3.5" />
-                              </button>
-                              <button
                                 onClick={(e) => toggleAnswer(query._id, e)}
-                                className="p-1.5 text-gray-300 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-all"
+                                className="p-1.5 text-gray-800 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-all"
                               >
                                 {isExpanded ? (
-                                  <ChevronUp className="h-3.5 w-3.5" />
+                                  <ChevronUp className="h-5 w-5" />
                                 ) : (
-                                  <ChevronDown className="h-3.5 w-3.5" />
+                                  <ChevronDown className="h-5 w-5" />
                                 )}
                               </button>
                             </div>

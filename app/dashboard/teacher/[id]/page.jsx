@@ -388,7 +388,7 @@ const TeacherDetail = () => {
               Retry
             </button>
             <Link
-              href="/dashboard"
+              href={router.back()}
               className="inline-flex items-center gap-2 text-sm font-semibold text-blue-600 hover:underline"
             >
               <ArrowLeft className="h-4 w-4" /> Back to Dashboard
@@ -501,132 +501,6 @@ const TeacherDetail = () => {
                     </div>
                   </div>
                 ))}
-              </div>
-            </div>
-
-            {/* Filters */}
-            <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
-              <button
-                onClick={() => setFilterOpen(!filterOpen)}
-                className="w-full flex items-center justify-between px-5 py-4 lg:cursor-default"
-              >
-                <div className="flex items-center gap-2">
-                  <SlidersHorizontal className="h-3.5 w-3.5 text-gray-400" />
-                  <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">
-                    Filters
-                  </p>
-                </div>
-                <ChevronDown
-                  className={`h-4 w-4 text-gray-300 lg:hidden transition-transform ${
-                    filterOpen ? "rotate-180" : ""
-                  }`}
-                />
-              </button>
-
-              <div
-                className={`px-5 pb-5 space-y-4 lg:block ${
-                  filterOpen ? "block" : "hidden"
-                }`}
-              >
-                <div className="flex bg-gray-50 rounded-xl p-1 gap-1 border border-gray-100">
-                  {[
-                    {
-                      key: FILTER_OPTIONS.ALL,
-                      label: "All",
-                      count: slots.length,
-                    },
-                    {
-                      key: FILTER_OPTIONS.AVAILABLE,
-                      label: "Open",
-                      count: totalAvailable,
-                    },
-                    {
-                      key: FILTER_OPTIONS.BOOKED,
-                      label: "Booked",
-                      count: totalBooked,
-                    },
-                  ].map((opt) => (
-                    <button
-                      key={opt.key}
-                      onClick={() => setFilter(opt.key)}
-                      className={`flex-1 px-2 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${
-                        filter === opt.key
-                          ? "bg-blue-600 text-white shadow-md shadow-blue-100"
-                          : "text-gray-400 hover:text-blue-600"
-                      }`}
-                    >
-                      {opt.label} ({opt.count})
-                    </button>
-                  ))}
-                </div>
-
-                <label className="flex items-center justify-between cursor-pointer py-1">
-                  <span className="text-sm font-semibold text-gray-700">
-                    Show booked
-                  </span>
-                  <div className="relative">
-                    <input
-                      type="checkbox"
-                      checked={showBooked}
-                      onChange={(e) => setShowBooked(e.target.checked)}
-                      className="sr-only"
-                    />
-                    <div
-                      className={`w-9 h-5 rounded-full transition-colors ${
-                        showBooked ? "bg-blue-600" : "bg-gray-200"
-                      }`}
-                    >
-                      <div
-                        className={`absolute w-3.5 h-3.5 bg-white rounded-full shadow-sm transition-transform top-[3px] ${
-                          showBooked
-                            ? "translate-x-[18px]"
-                            : "translate-x-[3px]"
-                        }`}
-                      />
-                    </div>
-                  </div>
-                </label>
-
-                {sortedDates.length > 0 && (
-                  <div>
-                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">
-                      By Date
-                    </p>
-                    <div className="flex flex-wrap gap-1.5">
-                      <button
-                        onClick={() => setSelectedDate(null)}
-                        className={`px-2.5 py-1 rounded-full text-xs font-semibold transition-all ${
-                          !selectedDate
-                            ? "bg-blue-600 text-white shadow-md shadow-blue-100"
-                            : "bg-gray-50 text-gray-500 border border-gray-200 hover:border-blue-200"
-                        }`}
-                      >
-                        All
-                      </button>
-                      {sortedDates.map((dateKey) => {
-                        const d = formatDate(dateKey);
-                        const label = d.isToday
-                          ? "Today"
-                          : d.isTomorrow
-                            ? "Tomorrow"
-                            : d.short;
-                        return (
-                          <button
-                            key={dateKey}
-                            onClick={() => setSelectedDate(dateKey)}
-                            className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${
-                              selectedDate === dateKey
-                                ? "bg-blue-600 text-white shadow-md shadow-blue-100"
-                                : "bg-gray-50 text-gray-500 border border-gray-200 hover:border-blue-200"
-                            }`}
-                          >
-                            {label}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
               </div>
             </div>
           </aside>
