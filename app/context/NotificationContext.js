@@ -3,12 +3,14 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import socket from "@/app/lib/socket";
 import { useStudent } from "./StudentContext";
+import { useEnrollMent } from "./TeacherEnroll";
 
 const NotificationContext = createContext();
 
 export const NotificationProvider = ({ children }) => {
   const [notifications, setNotifications] = useState([]);
   const { student } = useStudent();
+  const { enrollMent } = useEnrollMent();
 
   const addNotification = useCallback((notification) => {
     const id = Math.random().toString(36).substr(2, 9);
@@ -35,14 +37,48 @@ export const NotificationProvider = ({ children }) => {
 
   // Socket.io Global Listeners & Connection Management
   useEffect(() => {
-    if (!student?._id) return;
+    if (!student?._id) {
+      // No user — disconnect if connected
+      if (socket.connected) {
+        socket.disconnect();
+      }
+      return;
+    }
 
-    socket.connect();
-    socket.emit("join", student._id);
+    // Connect socket when user is authenticated
+    if (!socket.connected) {
+      socket.connect();
+    }
+
+    // Join user room + all chat rooms on connect (handles reconnects too)
+    const handleConnect = () => {
+      console.log("Socket connected, joining rooms for student:", student._id);
+      
+      // Join personal room
+      socket.emit("join", student._id);
+
+      // ✅ CRITICAL: Join ALL chat rooms so message notifications work on EVERY page
+      // Without this, message notifications only work on the chat page
+      if (enrollMent && enrollMent.length > 0) {
+        enrollMent.forEach((teacher) => {
+          const teacherId = teacher.teacher_id || teacher._id;
+          if (teacherId) {
+            const chatId = `${student._id}_${teacherId}`;
+            socket.emit("join_chat", chatId);
+            console.log("Joined global chat room:", chatId);
+          }
+        });
+      }
+    };
+
+    // If already connected, join immediately
+    if (socket.connected) {
+      handleConnect();
+    }
 
     // 1. New Message
     const handleReceiveMessage = (data) => {
-      // Only notify if it's NOT from the current student (sanity check)
+      // Only notify if it's NOT from the current student
       if (data.sender_id !== student._id) {
         addNotification({
           type: "message",
@@ -75,7 +111,6 @@ export const NotificationProvider = ({ children }) => {
 
     // 3. Query Update (Teacher reply)
     const handleUpdateQuery = (data) => {
-      // Check if it's a student's query and it has a reply
       if (data.status === "resolved" || (data.replies && data.replies.length > 0)) {
         addNotification({
           type: "success",
@@ -118,15 +153,17 @@ export const NotificationProvider = ({ children }) => {
       });
     };
 
+    socket.on("connect", handleConnect);
     socket.on("receive_message", handleReceiveMessage);
     socket.on("new_announcement", handleNewAnnouncement);
     socket.on("update_announcement", handleUpdateAnnouncement);
     socket.on("update_query", handleUpdateQuery);
     socket.on("update_session_status", handleUpdateSessionStatus);
     socket.on("slot_deleted_with_sessions", handleSlotDeleted);
-    socket.on("receiveNotification", handleGeneralNotification); // From notices/page.jsx & Backend
+    socket.on("receiveNotification", handleGeneralNotification);
 
     return () => {
+      socket.off("connect", handleConnect);
       socket.off("receive_message", handleReceiveMessage);
       socket.off("new_announcement", handleNewAnnouncement);
       socket.off("update_announcement", handleUpdateAnnouncement);
@@ -136,7 +173,7 @@ export const NotificationProvider = ({ children }) => {
       socket.off("receiveNotification", handleGeneralNotification);
       socket.disconnect();
     };
-  }, [student?._id, addNotification]);
+  }, [student?._id, enrollMent, addNotification]);
 
   return (
     <NotificationContext.Provider value={{ notifications, addNotification, removeNotification }}>

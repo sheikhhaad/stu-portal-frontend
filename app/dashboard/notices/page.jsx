@@ -57,37 +57,38 @@ export default function NoticesPage() {
   };
 
   useEffect(() => {
-    socket.on("receiveNotification", (data) => {
-      console.log("New Notification:", data);
-    });
-  }, []);
+    if (!student?._id) return;
 
-  useEffect(() => {
     fetchAllNotices();
 
-    // NEW announcement
-    socket.on("new_announcement", (data) => {
-      setNotices((prev) => [data, ...prev]);
-    });
+    // Named handlers for proper cleanup
+    const handleNewAnnouncement = (data) => {
+      setNotices((prev) => {
+        if (prev.find((n) => n._id === data._id)) return prev;
+        return [data, ...prev];
+      });
+    };
 
-    // UPDATE
-    socket.on("update_announcement", (updated) => {
+    const handleUpdateAnnouncement = (updated) => {
       setNotices((prev) =>
         prev.map((item) => (item._id === updated._id ? updated : item)),
       );
-    });
+    };
 
-    // DELETE
-    socket.on("delete_announcement", ({ id }) => {
+    const handleDeleteAnnouncement = ({ id }) => {
       setNotices((prev) => prev.filter((item) => item._id !== id));
-    });
+    };
+
+    socket.on("new_announcement", handleNewAnnouncement);
+    socket.on("update_announcement", handleUpdateAnnouncement);
+    socket.on("delete_announcement", handleDeleteAnnouncement);
 
     return () => {
-      socket.off("new_announcement");
-      socket.off("update_announcement");
-      socket.off("delete_announcement");
+      socket.off("new_announcement", handleNewAnnouncement);
+      socket.off("update_announcement", handleUpdateAnnouncement);
+      socket.off("delete_announcement", handleDeleteAnnouncement);
     };
-  }, [student]);
+  }, [student?._id]);
 
   if (loading) return <Loading message="Syncing your notices..." />;
   if (error) return <Error message={error} onRetry={fetchAllNotices} />;

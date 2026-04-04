@@ -16,16 +16,16 @@ export default function RootLayout({ children }) {
     <html lang="en">
       <body className="antialiased">
         <StudentProvider>
-          <NotificationProvider>
-            <EnrollMentProvider>
+          <EnrollMentProvider>
+            <NotificationProvider>
               <QueryProvider>
                 <ChatProvider>
                   {children}
                   <NotificationContainer />
                 </ChatProvider>
               </QueryProvider>
-            </EnrollMentProvider>
-          </NotificationProvider>
+            </NotificationProvider>
+          </EnrollMentProvider>
         </StudentProvider>
       </body>
     </html>

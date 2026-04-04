@@ -1,18 +1,44 @@
 import { io } from "socket.io-client";
 
-// Retrieve URL from environment, or default if missing in development
-// const SOCKET_URL =  "http://localhost:8000";
-let SOCKET_URL = "https://stu-portal-backend.vercel.app";
+const SOCKET_URL =
+  "https://stu-portal-backend.vercel.app";
+  // "http://localhost:8000";
 
-const socket = io(SOCKET_URL, {
-  autoConnect: false, // Wait for auth before connecting theoretically, but we might just connect and `.emit('join')` later
-  reconnectionAttempts: 5,
-  timeout: 10000,
-  transports: ["websocket", "polling"], // Try websocket first, fallback to polling
-});
+let socket;
 
-socket.on("connect_error", (err) => {
-  console.log(`Socket connection error: ${err.message}`);
-});
+if (typeof window !== "undefined") {
+  socket = io(SOCKET_URL, {
+    withCredentials: true,
+    autoConnect: false,
+    reconnection: true,
+    reconnectionAttempts: 10,
+    reconnectionDelay: 1000,
+    reconnectionDelayMax: 5000,
+    transports: ["websocket", "polling"],
+  });
+
+  socket.on("connect", () => {
+    console.log("Socket connected:", socket.id);
+  });
+
+  socket.on("connect_error", (err) => {
+    console.log("Socket connection error:", err.message);
+  });
+
+  socket.on("reconnect", (attemptNumber) => {
+    console.log("Socket reconnected after", attemptNumber, "attempts");
+  });
+} else {
+  // SSR placeholder — never used on server, prevents import crash
+  socket = {
+    on: () => {},
+    off: () => {},
+    emit: () => {},
+    connect: () => {},
+    disconnect: () => {},
+    connected: false,
+    id: null,
+  };
+}
 
 export default socket;

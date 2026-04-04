@@ -1,8 +1,11 @@
 import axios from "axios";
 
+const API_URL =
+  "https://stu-portal-backend.vercel.app";
+  // "http://localhost:8000";
+
 const api = axios.create({
-  // baseURL: "http://localhost:8000/api",
-  baseURL: "https://stu-portal-backend.vercel.app/api",
+  baseURL: `${API_URL}/api`,
   withCredentials: true,
 });
 
