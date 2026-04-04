@@ -1,14 +1,18 @@
 import { io } from "socket.io-client";
 
-const socket = io("https://stu-portal-backend.vercel.app", {
-  autoConnect: false,
+// Retrieve URL from environment, or default if missing in development
+// const SOCKET_URL =  "http://localhost:8000";
+let SOCKET_URL = "https://stu-portal-backend.vercel.app";
+
+const socket = io(SOCKET_URL, {
+  autoConnect: false, // Wait for auth before connecting theoretically, but we might just connect and `.emit('join')` later
+  reconnectionAttempts: 5,
+  timeout: 10000,
+  transports: ["websocket", "polling"], // Try websocket first, fallback to polling
 });
 
-if (typeof window !== "undefined") {
-  socket.connect();
-}
-
-socket.on("connect", () => console.log("Socket connected:", socket.id));
-socket.on("connect_error", (err) => console.log("Socket error:", err.message));
+socket.on("connect_error", (err) => {
+  console.log(`Socket connection error: ${err.message}`);
+});
 
 export default socket;

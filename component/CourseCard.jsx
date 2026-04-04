@@ -17,7 +17,7 @@ export default function CourseCard({ course }) {
           {/* Title + code */}
           <div className="flex items-start justify-between gap-4 mb-4">
             <h2 className="text-base font-bold text-gray-900 leading-tight line-clamp-2 flex-1 group-hover:text-blue-700 transition-colors">
-              {course.title}
+              {course.name}
             </h2>
             <span className="shrink-0 px-2.5 py-1 bg-sky-50 text-blue-500 text-[10px] font-bold uppercase tracking-widest rounded-lg border border-sky-100 transition-colors group-hover:bg-blue-600 group-hover:text-white group-hover:border-blue-600">
               {course.code}

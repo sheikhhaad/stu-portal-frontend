@@ -104,19 +104,32 @@ export const ChatProvider = ({ children }) => {
     [student?._id],
   );
 
-  // 4. Set active chat + initial fetch
+  // 4. Set active chat + initial fetch + socket room
   useEffect(() => {
     if (!activeTeacherId || !student?._id) {
       setMessages([]);
-      activeChatIdRef.current = null;
+      if (activeChatIdRef.current) {
+        socket.emit("leave_chat", activeChatIdRef.current);
+        activeChatIdRef.current = null;
+      }
       return;
     }
 
     const chatId = `${student._id}_${activeTeacherId}`;
-    // ✅ Set ref so socket handler always knows the current chat
+    
+    if (activeChatIdRef.current && activeChatIdRef.current !== chatId) {
+      socket.emit("leave_chat", activeChatIdRef.current);
+    }
+    
     activeChatIdRef.current = chatId;
+    socket.emit("join_chat", chatId);
 
     fetchMessages(activeTeacherId);
+
+    return () => {
+      socket.emit("leave_chat", chatId);
+      activeChatIdRef.current = null;
+    };
   }, [activeTeacherId, student?._id, fetchMessages]);
 
   // 5. Socket listener — single event, uses ref to filter correctly

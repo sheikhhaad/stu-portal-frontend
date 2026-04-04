@@ -33,9 +33,12 @@ export const NotificationProvider = ({ children }) => {
     setNotifications((prev) => prev.filter((n) => n.id !== id));
   }, []);
 
-  // Socket.io Global Listeners
+  // Socket.io Global Listeners & Connection Management
   useEffect(() => {
     if (!student?._id) return;
+
+    socket.connect();
+    socket.emit("join", student._id);
 
     // 1. New Message
     const handleReceiveMessage = (data) => {
@@ -83,7 +86,29 @@ export const NotificationProvider = ({ children }) => {
       }
     };
 
-    // 4. Catch-all Notification from Backend
+    // 4. Session Update (Approved/Rejected)
+    const handleUpdateSessionStatus = (data) => {
+      addNotification({
+        type: data.session.status === "accepted" ? "success" : "info",
+        title: "Session Updated",
+        message: data.session.status === "accepted" 
+          ? "Your session has been approved! Check meeting link." 
+          : `Session status: ${data.session.status}`,
+        icon: "Calendar",
+      });
+    };
+
+    // 5. Slot Deleted
+    const handleSlotDeleted = (data) => {
+      addNotification({
+        type: "warning",
+        title: "Session Cancelled",
+        message: "A scheduled session slot was deleted by the teacher.",
+        icon: "AlertTriangle",
+      });
+    };
+
+    // 6. Catch-all Notification from Backend
     const handleGeneralNotification = (data) => {
       addNotification({
         type: data.type || "info",
@@ -97,6 +122,8 @@ export const NotificationProvider = ({ children }) => {
     socket.on("new_announcement", handleNewAnnouncement);
     socket.on("update_announcement", handleUpdateAnnouncement);
     socket.on("update_query", handleUpdateQuery);
+    socket.on("update_session_status", handleUpdateSessionStatus);
+    socket.on("slot_deleted_with_sessions", handleSlotDeleted);
     socket.on("receiveNotification", handleGeneralNotification); // From notices/page.jsx & Backend
 
     return () => {
@@ -104,7 +131,10 @@ export const NotificationProvider = ({ children }) => {
       socket.off("new_announcement", handleNewAnnouncement);
       socket.off("update_announcement", handleUpdateAnnouncement);
       socket.off("update_query", handleUpdateQuery);
+      socket.off("update_session_status", handleUpdateSessionStatus);
+      socket.off("slot_deleted_with_sessions", handleSlotDeleted);
       socket.off("receiveNotification", handleGeneralNotification);
+      socket.disconnect();
     };
   }, [student?._id, addNotification]);
 
