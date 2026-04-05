@@ -12,7 +12,7 @@ import React, {
 import api from "@/app/lib/api";
 import { useStudent } from "./StudentContext";
 import { useEnrollMent } from "./TeacherEnroll";
-import socket from "@/app/lib/socket";
+import { socket } from "@/app/lib/socket"; // ✅ import socket
 
 const ChatContext = createContext();
 
@@ -26,11 +26,9 @@ export const ChatProvider = ({ children }) => {
   const [activeTeacherId, setActiveTeacherId] = useState(null);
   const [sendingMessage, setSendingMessage] = useState(false);
   const [loadingMessages, setLoadingMessages] = useState(false);
+  const activeChatIdRef = useRef(null); // track active chat for filtering
 
-  // ✅ Ref tracks active chat_id for socket handler without stale closure
-  const activeChatIdRef = useRef(null);
-
-  // 1. Fetch enrolled teachers
+  // 1. Fetch enrolled teachers with details
   const fetchAllTeacherDetails = useCallback(async () => {
     if (!enrollMent || enrollMent.length === 0) {
       setFetchingTeachers(false);
@@ -62,26 +60,7 @@ export const ChatProvider = ({ children }) => {
     fetchAllTeacherDetails();
   }, [fetchAllTeacherDetails]);
 
-  // 2. Teacher detail lookup with cache
-  const getOrFetchTeacherDetails = useCallback(
-    async (teacherId) => {
-      if (!teacherId) return null;
-      const cached = teachersWithDetails.find(
-        (t) => t.teacherId === teacherId || t._id === teacherId,
-      );
-      if (cached) return cached;
-      try {
-        const res = await api.get(`/enrollments/teacher/info/${teacherId}`);
-        return res.data?.teacher || res.data;
-      } catch (error) {
-        console.error("Error fetching single teacher fallback:", error);
-        return null;
-      }
-    },
-    [teachersWithDetails],
-  );
-
-  // 3. Fetch messages — populates state, no client-side filter needed
+  // 2. Fetch messages for the active teacher
   const fetchMessages = useCallback(
     async (targetTeacherId) => {
       if (!student?._id || !targetTeacherId) return;
@@ -91,9 +70,9 @@ export const ChatProvider = ({ children }) => {
           `/messages/${student._id}/${targetTeacherId}`,
         );
         const data = Array.isArray(res.data) ? res.data : [];
-        // ✅ Removed redundant client-side filter — backend already
-        // returns only messages for this chat_id
         setMessages(data);
+        // Update active chat ID for socket filtering
+        activeChatIdRef.current = `${student._id}_${targetTeacherId}`;
       } catch (error) {
         console.error("Error fetching messages:", error);
         setMessages([]);
@@ -104,73 +83,22 @@ export const ChatProvider = ({ children }) => {
     [student?._id],
   );
 
-  // 4. Set active chat + initial fetch + socket room
-  useEffect(() => {
-    if (!activeTeacherId || !student?._id) {
-      setMessages([]);
-      if (activeChatIdRef.current) {
-        socket.emit("leave_chat", activeChatIdRef.current);
-        activeChatIdRef.current = null;
-      }
-      return;
-    }
-
-    const chatId = `${student._id}_${activeTeacherId}`;
-    
-    if (activeChatIdRef.current && activeChatIdRef.current !== chatId) {
-      socket.emit("leave_chat", activeChatIdRef.current);
-    }
-    
-    activeChatIdRef.current = chatId;
-    socket.emit("join_chat", chatId);
-
-    fetchMessages(activeTeacherId);
-
-    return () => {
-      socket.emit("leave_chat", chatId);
-      activeChatIdRef.current = null;
-    };
-  }, [activeTeacherId, student?._id, fetchMessages]);
-
-  // 5. Socket listener — single event, uses ref to filter correctly
+  // 3. Fetch messages when active teacher changes
   useEffect(() => {
     if (!student?._id) return;
+    fetchMessages(activeTeacherId);
+  }, [activeTeacherId, student?._id, fetchMessages]);
 
-    const handleReceiveMessage = (newMessage) => {
-      // ✅ Use ref — not state — so this is never a stale closure
-      if (
-        activeChatIdRef.current &&
-        newMessage.chat_id !== activeChatIdRef.current
-      ) {
-        return;
-      }
-
-      setMessages((prev) => {
-        // ✅ Deduplicate — covers both real-time and optimistic replacements
-        if (prev.find((m) => m._id === newMessage._id)) return prev;
-        return [...prev, newMessage];
-      });
-    };
-
-    // ✅ Single listener — "receive_message" matches exactly what backend emits
-    // Removed dead "message received" listener
-    socket.on("receive_message", handleReceiveMessage);
-
-    return () => {
-      socket.off("receive_message", handleReceiveMessage);
-    };
-  }, [student?._id]); // ✅ empty-ish deps — ref keeps handler current
-
+  // 4. Set active chat (teacher)
   const setActiveChat = useCallback((teacherId) => {
     setActiveTeacherId(teacherId);
   }, []);
 
-  // 6. Send message with optimistic update
+  // 5. Send message with optimistic update
   const sendMessage = useCallback(
     async (teacherId, messageText) => {
       if (!messageText.trim() || sendingMessage || !student?._id) return false;
 
-      // ✅ Optimistic update — message appears instantly
       const optimisticMsg = {
         _id: `temp_${Date.now()}`,
         chat_id: `${student._id}_${teacherId}`,
@@ -194,23 +122,12 @@ export const ChatProvider = ({ children }) => {
         });
 
         const savedMsg = res.data?.data || res.data;
-
-        // ✅ Replace optimistic message with real saved one
         setMessages((prev) =>
           prev.map((m) => (m._id === optimisticMsg._id ? savedMsg : m)),
         );
-
-        // ✅ Removed socket.emit("send_message") — backend's sendRealtime()
-        // already broadcasts to all clients. Emitting again caused
-        // duplicate messages appearing on both sides.
-
-        // ✅ Removed fetchMessages() call — optimistic update + socket
-        // handles everything. Re-fetching caused flicker and race conditions.
-
         return true;
       } catch (error) {
         console.error("Error sending message:", error);
-        // ✅ Roll back optimistic message on failure
         setMessages((prev) => prev.filter((m) => m._id !== optimisticMsg._id));
         return false;
       } finally {
@@ -218,8 +135,36 @@ export const ChatProvider = ({ children }) => {
       }
     },
     [sendingMessage, student?._id],
-    // ✅ Removed fetchMessages from deps — it's no longer called here
   );
+
+  // 6. Real‑time socket listener – global "new_message", filtered by active chat
+  useEffect(() => {
+    if (!student?._id) return;
+    if (!socket.connected) socket.connect();
+
+    const handleNewMessage = (newMessage) => {
+      // Only add if it belongs to the currently open chat
+      if (newMessage.chat_id === activeChatIdRef.current) {
+        setMessages((prev) => {
+          if (prev.find((m) => m._id === newMessage._id)) return prev;
+          return [...prev, newMessage];
+        });
+      }
+    };
+
+    socket.on("new_message", handleNewMessage);
+
+    return () => {
+      socket.off("new_message", handleNewMessage);
+    };
+  }, [student?._id]);
+
+  // 7. Clear active chat on unmount (optional)
+  useEffect(() => {
+    return () => {
+      activeChatIdRef.current = null;
+    };
+  }, []);
 
   return (
     <ChatContext.Provider
@@ -233,7 +178,19 @@ export const ChatProvider = ({ children }) => {
         setActiveChat,
         sendMessage,
         refetchTeachers: fetchAllTeacherDetails,
-        getOrFetchTeacherDetails,
+        getOrFetchTeacherDetails: async (teacherId) => {
+          const cached = teachersWithDetails.find(
+            (t) => t.teacherId === teacherId || t._id === teacherId,
+          );
+          if (cached) return cached;
+          try {
+            const res = await api.get(`/enrollments/teacher/info/${teacherId}`);
+            return res.data?.teacher || res.data;
+          } catch (error) {
+            console.error("Error fetching single teacher:", error);
+            return null;
+          }
+        },
       }}
     >
       {children}

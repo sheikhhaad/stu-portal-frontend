@@ -2,7 +2,7 @@
 
 import { useStudent } from "@/app/context/StudentContext";
 import api from "@/app/lib/api";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import React, { useEffect, useState, useCallback, useRef } from "react";
 import {
@@ -12,18 +12,16 @@ import {
   CalendarDays,
   User,
   MapPin,
-  Filter,
   AlertCircle,
   ArrowLeft,
   Video,
   ChevronDown,
   ChevronUp,
-  SlidersHorizontal,
   RefreshCw,
 } from "lucide-react";
 import { SlotCard } from "@/component/SlotCard";
 import { motion, AnimatePresence } from "framer-motion";
-import socket from "@/app/lib/socket";
+import { socket } from "@/app/lib/socket"; // ✅ import socket
 
 // ── Helpers ──
 const formatDate = (dateString) => {
@@ -100,11 +98,10 @@ const generateTimeBlocks = (slot) => {
   return blocks;
 };
 
-const FILTER_OPTIONS = { ALL: "all", AVAILABLE: "available", BOOKED: "booked" };
-
 // ── Component ──
 const TeacherDetail = () => {
   const { id: teacherId } = useParams();
+  const router = useRouter();
   const { student } = useStudent();
 
   const [slots, setSlots] = useState([]);
@@ -113,12 +110,7 @@ const TeacherDetail = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
   const [bookingId, setBookingId] = useState(null);
-  const [selectedDate, setSelectedDate] = useState(null);
-  const [filter, setFilter] = useState(FILTER_OPTIONS.ALL);
-  const [showBooked, setShowBooked] = useState(true);
   const [collapsedDates, setCollapsedDates] = useState({});
-  const [filterOpen, setFilterOpen] = useState(false);
-
   const isMounted = useRef(true);
 
   useEffect(() => {
@@ -131,36 +123,24 @@ const TeacherDetail = () => {
   // Fetch slots
   const fetchSlots = useCallback(async () => {
     if (!teacherId) return;
-
     try {
       setLoading(true);
       setError(null);
       const res = await api.get(`/availability/${teacherId}`);
-
-      if (isMounted.current) {
-        setSlots(res.data || []);
-      }
+      if (isMounted.current) setSlots(res.data || []);
     } catch (err) {
       console.error("Error fetching slots:", err);
-      if (isMounted.current) {
-        setError("Failed to load availability slots.");
-      }
+      if (isMounted.current) setError("Failed to load availability slots.");
     } finally {
-      if (isMounted.current) {
-        setLoading(false);
-      }
+      if (isMounted.current) setLoading(false);
     }
   }, [teacherId]);
 
-  // Fetch sessions
+  // Fetch sessions for this student
   const fetchSessions = useCallback(async () => {
     if (!teacherId || !student?._id) return;
-
     try {
-      const res = await api.get(`/session/student/${student._id}`, {
-        withCredentials: true,
-      });
-
+      const res = await api.get(`/session/student/${student._id}`);
       const raw = res.data;
       const normalised = Array.isArray(raw)
         ? raw
@@ -169,15 +149,10 @@ const TeacherDetail = () => {
           : raw?._id
             ? [raw]
             : [];
-
-      if (isMounted.current) {
-        setSessions(normalised);
-      }
+      if (isMounted.current) setSessions(normalised);
     } catch (err) {
       console.error("Error fetching sessions:", err);
-      if (isMounted.current) {
-        setSessions([]);
-      }
+      if (isMounted.current) setSessions([]);
     }
   }, [teacherId, student?._id]);
 
@@ -188,86 +163,73 @@ const TeacherDetail = () => {
     setRefreshing(false);
   }, [fetchSlots, fetchSessions]);
 
-  // Initial data fetch
+  // Initial fetch
   useEffect(() => {
     if (teacherId) {
       fetchSlots();
-      if (student?._id) {
-        fetchSessions();
-      }
+      if (student?._id) fetchSessions();
     }
   }, [teacherId, student?._id, fetchSlots, fetchSessions]);
 
-  // Real-time socket listeners
+  // ✅ Real‑time socket listeners (matches backend events)
   useEffect(() => {
-    if (!teacherId || !socket) return;
+    if (!teacherId || !student?._id) return;
+    if (!socket.connected) socket.connect();
 
-    const handleNewSessionRequest = (data) => {
-      const { session, slot, teacher_id, student_id } = data;
-
-      if (teacher_id === teacherId && student_id === student?._id) {
+    const handleSessionBooked = (session) => {
+      if (
+        session.teacher_id === teacherId &&
+        session.student_id === student._id
+      ) {
         setSessions((prev) => {
           if (prev.find((s) => s._id === session._id)) return prev;
           return [...prev, session];
         });
-
-        if (slot) {
-          setSlots((prev) => prev.map((s) => (s._id === slot._id ? slot : s)));
-        }
-      }
-    };
-
-    const handleSlotUpdate = (updatedSlot) => {
-      if (updatedSlot.teacher_id === teacherId) {
+        // Update slot booked status
         setSlots((prev) =>
-          prev.map((s) => (s._id === updatedSlot._id ? updatedSlot : s)),
+          prev.map((s) =>
+            s._id === session.slot_id
+              ? { ...s, is_booked: true, booked_by: student._id }
+              : s,
+          ),
         );
       }
     };
 
-    const handleSlotDeletedWithSessions = (data) => {
-      const { slotId, teacherId: deletedTeacherId, sessionIds } = data;
-      if (deletedTeacherId === teacherId) {
-        setSlots((prev) => prev.filter((s) => s._id !== slotId));
-        setSessions((prev) => prev.filter((s) => !sessionIds.includes(s._id)));
+    const handleSessionUpdated = (session) => {
+      if (
+        session.teacher_id === teacherId &&
+        session.student_id === student._id
+      ) {
+        setSessions((prev) =>
+          prev.map((s) => (s._id === session._id ? session : s)),
+        );
       }
     };
 
-    const handleNewSlot = (data) => {
-      const { slot, teacherId: slotTeacherId } = data;
-      if (slotTeacherId === teacherId) {
-        setSlots((prev) => {
-          if (prev.find((s) => s._id === slot._id)) return prev;
-          return [...prev, slot];
-        });
-      }
+    const handleSessionDeleted = ({ id }) => {
+      setSessions((prev) => prev.filter((s) => s._id !== id));
     };
 
-    const handleDeleteSlot = (data) => {
-      const { id: slotId, teacherId: deletedTeacherId } = data;
-      if (deletedTeacherId === teacherId) {
-        setSlots((prev) => prev.filter((s) => s._id !== slotId));
-      }
+    const handleSlotDeleted = ({ slotId }) => {
+      setSlots((prev) => prev.filter((s) => s._id !== slotId));
     };
 
-    socket.on("new_session_request", handleNewSessionRequest);
-    socket.on("slot_update", handleSlotUpdate);
-    socket.on("slot_deleted_with_sessions", handleSlotDeletedWithSessions);
-    socket.on("new_slot", handleNewSlot);
-    socket.on("delete_slot", handleDeleteSlot);
+    socket.on("session_booked", handleSessionBooked);
+    socket.on("session_updated", handleSessionUpdated);
+    socket.on("session_deleted", handleSessionDeleted);
+    socket.on("slot_deleted", handleSlotDeleted);
 
     return () => {
-      socket.off("new_session_request", handleNewSessionRequest);
-      socket.off("slot_update", handleSlotUpdate);
-      socket.off("slot_deleted_with_sessions", handleSlotDeletedWithSessions);
-      socket.off("new_slot", handleNewSlot);
-      socket.off("delete_slot", handleDeleteSlot);
+      socket.off("session_booked", handleSessionBooked);
+      socket.off("session_updated", handleSessionUpdated);
+      socket.off("session_deleted", handleSessionDeleted);
+      socket.off("slot_deleted", handleSlotDeleted);
     };
   }, [teacherId, student?._id]);
 
-  const getSessionsForSlot = (slotId) => {
-    return sessions.filter((s) => s.slot_id === slotId);
-  };
+  const getSessionsForSlot = (slotId) =>
+    sessions.filter((s) => s.slot_id === slotId);
 
   const bookSlot = async (slotId, slot, blockStartTime) => {
     if (!student) {
@@ -278,8 +240,9 @@ const TeacherDetail = () => {
     const blockId = `${slotId}-${blockStartTime}`;
     setBookingId(blockId);
 
+    // Optimistic update
     const optimisticSession = {
-      _id: `optimistic_${Date.now()}`,
+      _id: `opt_${Date.now()}`,
       slot_id: slotId,
       student_id: student._id,
       teacher_id: teacherId,
@@ -287,7 +250,6 @@ const TeacherDetail = () => {
       requested_time: new Date(`${slot.date}T${blockStartTime}`).toISOString(),
       _isOptimistic: true,
     };
-
     setSessions((prev) => [...prev, optimisticSession]);
     setSlots((prev) =>
       prev.map((s) =>
@@ -301,7 +263,6 @@ const TeacherDetail = () => {
       const requestedTimeIso = new Date(
         `${slot.date}T${blockStartTime}`,
       ).toISOString();
-
       const res = await api.put(`/session/book/${slotId}`, {
         student_id: student._id,
         teacher_id: teacherId,
@@ -313,11 +274,8 @@ const TeacherDetail = () => {
       const updatedSlot = res.data?.slot;
 
       setSessions((prev) =>
-        prev
-          .map((s) => (s._id === optimisticSession._id ? newSession : s))
-          .filter((s) => s._id !== optimisticSession._id || s === newSession),
+        prev.map((s) => (s._id === optimisticSession._id ? newSession : s)),
       );
-
       if (updatedSlot) {
         setSlots((prev) =>
           prev.map((s) => (s._id === slotId ? updatedSlot : s)),
@@ -325,6 +283,7 @@ const TeacherDetail = () => {
       }
     } catch (err) {
       console.error("Booking error:", err);
+      // Rollback optimistic
       setSessions((prev) =>
         prev.filter((s) => s._id !== optimisticSession._id),
       );
@@ -342,13 +301,7 @@ const TeacherDetail = () => {
   const toggleDateCollapse = (dateKey) =>
     setCollapsedDates((prev) => ({ ...prev, [dateKey]: !prev[dateKey] }));
 
-  const filteredSlots = slots.filter((slot) => {
-    if (filter === "available" && slot.is_booked) return false;
-    if (filter === "booked" && !slot.is_booked) return false;
-    return true;
-  });
-
-  const grouped = groupSlotsByDate(filteredSlots);
+  const grouped = groupSlotsByDate(slots);
   const totalAvailable = slots.filter((s) => !s.is_booked).length;
   const totalBooked = slots.filter((s) => s.is_booked).length;
   const sortedDates = Object.keys(grouped).sort(
@@ -387,12 +340,12 @@ const TeacherDetail = () => {
               <RefreshCw className="h-4 w-4" />
               Retry
             </button>
-            <Link
-              href={router.back()}
+            <button
+              onClick={() => router.back()}
               className="inline-flex items-center gap-2 text-sm font-semibold text-blue-600 hover:underline"
             >
               <ArrowLeft className="h-4 w-4" /> Back to Dashboard
-            </Link>
+            </button>
           </div>
         </div>
       </div>
@@ -405,14 +358,13 @@ const TeacherDetail = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
         {/* Header with refresh */}
         <div className="flex items-center justify-between mb-6">
-          <Link
-            href="/dashboard"
+          <button
+            onClick={() => router.back()}
             className="inline-flex items-center gap-2 text-sm text-gray-400 hover:text-gray-900 font-semibold transition-colors group"
           >
             <ArrowLeft className="h-4 w-4 group-hover:-translate-x-0.5 transition-transform" />
             Back to Dashboard
-          </Link>
-
+          </button>
           <button
             onClick={refreshData}
             disabled={refreshing}
@@ -471,7 +423,6 @@ const TeacherDetail = () => {
         <div className="flex flex-col lg:flex-row gap-5">
           {/* Sidebar */}
           <aside className="w-full lg:w-64 flex-shrink-0 space-y-4">
-            {/* Session info */}
             <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
               <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4">
                 Session Info
@@ -481,7 +432,7 @@ const TeacherDetail = () => {
                   {
                     icon: User,
                     label: "Teacher",
-                    value: `${teacherId?.slice(0, 10) || "Unknown"}…`,
+                    value: `${teacherId?.slice(0, 10)}…`,
                   },
                   { icon: Video, label: "Format", value: "Online Video Call" },
                   { icon: Clock, label: "Duration", value: "15 min / slot" },
@@ -514,7 +465,7 @@ const TeacherDetail = () => {
                   Session Slots
                 </h2>
                 <span className="ml-auto px-2 py-0.5 bg-gray-100 text-gray-500 rounded-full text-xs font-bold">
-                  {filteredSlots.length}
+                  {slots.length}
                 </span>
               </div>
 
@@ -536,42 +487,25 @@ const TeacherDetail = () => {
                 {slots.length > 0 && sortedDates.length === 0 && (
                   <div className="flex flex-col items-center justify-center py-20 text-center">
                     <div className="w-12 h-12 bg-gray-50 rounded-xl flex items-center justify-center mb-4 border border-gray-100">
-                      <Filter className="h-5 w-5 text-gray-300" />
+                      <CalendarDays className="h-5 w-5 text-gray-300" />
                     </div>
                     <h3 className="text-sm font-bold text-gray-900 mb-1">
-                      No Slots Match
+                      No Slots Found
                     </h3>
-                    <p className="text-xs text-gray-400 max-w-xs mb-5">
-                      Try adjusting your filters.
+                    <p className="text-xs text-gray-400 max-w-xs">
+                      No slots available at the moment.
                     </p>
-                    <button
-                      onClick={() => {
-                        setFilter(FILTER_OPTIONS.ALL);
-                        setSelectedDate(null);
-                        setShowBooked(true);
-                      }}
-                      className="px-4 py-2 bg-gray-900 text-white text-xs font-bold rounded-xl hover:bg-gray-800 transition-all"
-                    >
-                      Clear Filters
-                    </button>
                   </div>
                 )}
 
                 {sortedDates.length > 0 && (
                   <div className="space-y-3">
                     {sortedDates.map((dateKey, idx) => {
-                      if (selectedDate && selectedDate !== dateKey) return null;
                       const dateSlots = grouped[dateKey];
                       const d = formatDate(dateKey);
                       const availSlots = dateSlots.filter((s) => !s.is_booked);
                       const bookedSlots = dateSlots.filter((s) => s.is_booked);
                       const isCollapsed = collapsedDates[dateKey];
-
-                      if (!showBooked && availSlots.length === 0) return null;
-
-                      const visible = showBooked
-                        ? dateSlots
-                        : dateSlots.filter((s) => !s.is_booked);
 
                       return (
                         <motion.div
@@ -636,7 +570,7 @@ const TeacherDetail = () => {
                               >
                                 <div className="border-t border-gray-100 bg-gray-50/50 p-4">
                                   <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-none snap-x snap-mandatory">
-                                    {visible.map((slot) => (
+                                    {dateSlots.map((slot) => (
                                       <div
                                         key={slot._id}
                                         className="flex-shrink-0 w-72 snap-start"
@@ -663,7 +597,7 @@ const TeacherDetail = () => {
                                       </div>
                                     ))}
                                   </div>
-                                  {visible.length > 3 && (
+                                  {dateSlots.length > 3 && (
                                     <p className="text-[10px] text-gray-300 font-semibold uppercase tracking-widest text-right mt-2 pr-1">
                                       Scroll for more →
                                     </p>

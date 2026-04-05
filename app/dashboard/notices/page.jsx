@@ -1,104 +1,140 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useStudent } from "@/app/context/StudentContext";
 import api from "@/app/lib/api";
-import Loading from "@/component/Loading";
-import Error from "@/component/Error";
 import { motion } from "framer-motion";
 import { Bell, Calendar, Megaphone } from "lucide-react";
-import socket from "@/app/lib/socket";
+import { socket } from "@/app/lib/socket";
 
 export default function NoticesPage() {
   const { student } = useStudent();
   const [notices, setNotices] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [enrolledCourses, setEnrolledCourses] = useState([]);
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
 
-  const fetchAllNotices = async () => {
+  // Helper: add course name to an announcement
+  const enrichAnnouncement = useCallback(
+    (ann) => {
+      const course = enrolledCourses.find((c) => c._id === ann.course_id);
+      return {
+        ...ann,
+        courseName: course?.title || course?.name || "Unknown Course",
+      };
+    },
+    [enrolledCourses],
+  );
+
+  // Helper: check if an announcement belongs to the student
+  const isForStudent = useCallback(
+    (ann) => enrolledCourses.some((c) => c._id === ann.course_id),
+    [enrolledCourses],
+  );
+
+  // Fetch all notices (initial load)
+  const fetchAllNotices = useCallback(async () => {
     if (!student?._id) return;
-
     try {
-      setLoading(true);
-      setError(null);
-
       // 1. get enrolled courses
-      const enrollmentRes = await api.get(
-        `/enrollments/student/${student._id}`,
-      );
+      const enrollmentRes = await api.get(`/enrollments/student/${student._id}`);
       const courses = enrollmentRes.data.courses || [];
-
+      setEnrolledCourses(courses);
       const courseIds = courses.map((c) => c._id);
 
-      // 2. get all announcements (single call)
+      // 2. get all announcements
       const annRes = await api.get(`/announcements`);
       const allAnnouncements = Array.isArray(annRes.data) ? annRes.data : [];
 
-      // 3. filter by course_id
-      const filtered = allAnnouncements
+      // 3. filter and enrich
+      let filtered = allAnnouncements
         .filter((ann) => courseIds.includes(ann.course_id))
         .map((ann) => {
           const course = courses.find((c) => c._id === ann.course_id);
-
-          return {
-            ...ann,
-            courseName: course?.title || course?.name,
-          };
+          return { ...ann, courseName: course?.title || course?.name };
         });
 
-      // 4. sort
+      // 4. sort (newest first)
       filtered.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-
       setNotices(filtered);
-    } catch {
-      setError("Failed to load notices.");
+    } catch (err) {
+      console.error("Failed to load notices", err);
     } finally {
-      setLoading(false);
+      setIsInitialLoading(false);
     }
-  };
-
-  useEffect(() => {
-    if (!student?._id) return;
-
-    fetchAllNotices();
-
-    // Named handlers for proper cleanup
-    const handleNewAnnouncement = (data) => {
-      setNotices((prev) => {
-        if (prev.find((n) => n._id === data._id)) return prev;
-        return [data, ...prev];
-      });
-    };
-
-    const handleUpdateAnnouncement = (updated) => {
-      setNotices((prev) =>
-        prev.map((item) => (item._id === updated._id ? updated : item)),
-      );
-    };
-
-    const handleDeleteAnnouncement = ({ id }) => {
-      setNotices((prev) => prev.filter((item) => item._id !== id));
-    };
-
-    socket.on("new_announcement", handleNewAnnouncement);
-    socket.on("update_announcement", handleUpdateAnnouncement);
-    socket.on("delete_announcement", handleDeleteAnnouncement);
-
-    return () => {
-      socket.off("new_announcement", handleNewAnnouncement);
-      socket.off("update_announcement", handleUpdateAnnouncement);
-      socket.off("delete_announcement", handleDeleteAnnouncement);
-    };
   }, [student?._id]);
 
-  if (loading) return <Loading message="Syncing your notices..." />;
-  if (error) return <Error message={error} onRetry={fetchAllNotices} />;
+  // ---- Socket listeners (real-time) ----
+  useEffect(() => {
+    if (!student?._id || enrolledCourses.length === 0) return;
+
+    if (!socket.connected) socket.connect();
+
+    // Handle new announcement
+    const handleNew = (data) => {
+      if (isForStudent(data)) {
+        const enriched = enrichAnnouncement(data);
+        setNotices((prev) => {
+          if (prev.some((n) => n._id === enriched._id)) return prev;
+          const updated = [enriched, ...prev];
+          updated.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+          return updated;
+        });
+      }
+    };
+
+    // Handle delete announcement (receives { id })
+    const handleDelete = ({ id }) => {
+      setNotices((prev) => prev.filter((n) => n._id !== id));
+    };
+
+    // Handle update announcement (receives full updated object)
+    const handleUpdate = (updatedAnnouncement) => {
+      if (isForStudent(updatedAnnouncement)) {
+        const enriched = enrichAnnouncement(updatedAnnouncement);
+        setNotices((prev) => {
+          const exists = prev.some((n) => n._id === enriched._id);
+          if (!exists) return prev; // should exist, but just in case
+          const updatedList = prev.map((n) =>
+            n._id === enriched._id ? enriched : n
+          );
+          updatedList.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+          return updatedList;
+        });
+      } else {
+        // If updated announcement no longer belongs to student, remove it
+        setNotices((prev) => prev.filter((n) => n._id !== updatedAnnouncement._id));
+      }
+    };
+
+    socket.on("new_announcement", handleNew);
+    socket.on("delete_announcement", handleDelete);
+    socket.on("update_announcement", handleUpdate);
+
+    return () => {
+      socket.off("new_announcement", handleNew);
+      socket.off("delete_announcement", handleDelete);
+      socket.off("update_announcement", handleUpdate);
+    };
+  }, [student?._id, enrolledCourses, enrichAnnouncement, isForStudent]);
+
+  // Initial data load
+  useEffect(() => {
+    fetchAllNotices();
+  }, [fetchAllNotices]);
+
+  if (isInitialLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
-      className="max-w-8xl mx-auto  space-y-4"
+      className="max-w-8xl mx-auto space-y-4"
     >
       {/* Header */}
       <div className="flex items-center gap-3 pb-3 border-b border-gray-100">
@@ -115,7 +151,6 @@ export default function NoticesPage() {
         </div>
       </div>
 
-      {/* Empty state */}
       {notices.length === 0 ? (
         <div className="bg-white rounded-xl border border-dashed border-gray-200 py-14 text-center">
           <div className="w-12 h-12 bg-gray-50 rounded-xl flex items-center justify-center mx-auto mb-3 border border-gray-100">
@@ -138,7 +173,6 @@ export default function NoticesPage() {
               transition={{ delay: i * 0.05, duration: 0.3 }}
               className="bg-white rounded-xl border border-gray-100 p-4 hover:border-blue-100 hover:shadow-sm transition-all"
             >
-              {/* Top row: course badge + date */}
               <div className="flex flex-wrap items-center gap-2 mb-2">
                 <span className="px-2 py-0.5 bg-blue-600 text-white rounded-md text-[11px] font-medium">
                   {notice.courseName}
@@ -152,26 +186,9 @@ export default function NoticesPage() {
                   })}
                 </span>
               </div>
-
-              {/* Notice text */}
               <p className="text-sm text-gray-800 leading-relaxed mb-3">
                 {notice.text}
               </p>
-
-              {/* Instructor row */}
-              <div className="flex items-center gap-2 pt-2 border-t border-gray-50">
-                <div className="w-7 h-7 rounded-lg bg-blue-50 flex items-center justify-center text-xs font-semibold text-blue-600 shrink-0 uppercase">
-                  {notice.teacherName?.[0]}
-                </div>
-                <div className="min-w-0">
-                  <p className="text-[10px] text-gray-400 leading-none mb-0.5">
-                    Instructor
-                  </p>
-                  <p className="text-xs font-medium text-gray-700 truncate">
-                    {notice.teacherName}
-                  </p>
-                </div>
-              </div>
             </motion.div>
           ))}
         </div>
