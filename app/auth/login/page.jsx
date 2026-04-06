@@ -31,7 +31,10 @@ export default function Page() {
         rollNumber: stuId.toUpperCase(),
         password,
       });
-      if (res.status === 200) router.push("/dashboard");
+      if (res.status === 200) {
+        setStudent(res.data.student);
+        router.push("/dashboard");
+      }
     } catch (err) {
       setError(
         err.response?.data?.message || "Invalid credentials. Please try again.",

@@ -3,6 +3,8 @@ import { QueryProvider } from "./context/QueryContext";
 import { EnrollMentProvider } from "./context/TeacherEnroll";
 import { ChatProvider } from "./context/ChatContext";
 import "./globals.css";
+import { NotificationProvider } from "./context/NotificationContext";
+import { Toaster } from "react-hot-toast";
 
 export const metadata = {
   title: "Student Portal",
@@ -17,7 +19,10 @@ export default function RootLayout({ children }) {
           <EnrollMentProvider>
               <QueryProvider>
                 <ChatProvider>
-                  {children}
+                  <NotificationProvider>
+                    <Toaster position="top-right" />
+                    {children}
+                  </NotificationProvider>
                 </ChatProvider>
               </QueryProvider>
           </EnrollMentProvider>

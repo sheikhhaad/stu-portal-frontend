@@ -25,6 +25,8 @@ export function StudentProvider({ children }) {
         setStudent(res.data.student);
       } catch (err) {
         router.push("/auth/login");
+      } finally {
+        setLoading(false);
       }
     };
 

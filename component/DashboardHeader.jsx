@@ -1,6 +1,7 @@
 "use client";
 import { Menu, Bell, LogOut } from "lucide-react";
 import { useStudent } from "@/app/context/StudentContext";
+import NotificationBell from "./NotificationBell";
 
 export default function DashboardHeader({ onMenuClick }) {
   const { student, logout } = useStudent();
@@ -12,7 +13,7 @@ export default function DashboardHeader({ onMenuClick }) {
     return "Good evening";
   };
 
-  const firstName = student?.name?.split(" ")[0] || "Student";
+  const firstName = student?.name;
 
   return (
     <header className="shrink-0 bg-white/80 backdrop-blur-md border-b border-gray-100 px-6 py-4 flex items-center justify-between sticky top-0 z-30">
@@ -34,8 +35,14 @@ export default function DashboardHeader({ onMenuClick }) {
         </div>
       </div>
 
-      <div className="cursor-pointer hover:text-red-500" onClick={logout}>
-        <LogOut />
+      <div className="flex items-center gap-4">
+        <NotificationBell />
+        <button
+          onClick={logout}
+          className="p-2 hover:bg-red-50 rounded-lg transition-colors group"
+        >
+          <LogOut className="w-4 h-4 text-gray-300 group-hover:text-red-500 transition-colors" />
+        </button>
       </div>
     </header>
   );

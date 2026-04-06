@@ -4,7 +4,7 @@ import { useStudent } from "@/app/context/StudentContext";
 import api from "@/app/lib/api";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import React, { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import {
   Calendar,
   Clock,
@@ -21,7 +21,7 @@ import {
 } from "lucide-react";
 import { SlotCard } from "@/component/SlotCard";
 import { motion, AnimatePresence } from "framer-motion";
-import { socket } from "@/app/lib/socket"; // ✅ import socket
+import { socket } from "@/app/lib/socket";
 
 // ── Helpers ──
 const formatDate = (dateString) => {
@@ -99,7 +99,7 @@ const generateTimeBlocks = (slot) => {
 };
 
 // ── Component ──
-const TeacherDetail = () => {
+export default function TeacherDetail() {
   const { id: teacherId } = useParams();
   const router = useRouter();
   const { student } = useStudent();
@@ -120,23 +120,19 @@ const TeacherDetail = () => {
     };
   }, []);
 
-  // Fetch slots
   const fetchSlots = useCallback(async () => {
     if (!teacherId) return;
     try {
       setLoading(true);
-      setError(null);
       const res = await api.get(`/availability/${teacherId}`);
       if (isMounted.current) setSlots(res.data || []);
     } catch (err) {
-      console.error("Error fetching slots:", err);
       if (isMounted.current) setError("Failed to load availability slots.");
     } finally {
       if (isMounted.current) setLoading(false);
     }
   }, [teacherId]);
 
-  // Fetch sessions for this student
   const fetchSessions = useCallback(async () => {
     if (!teacherId || !student?._id) return;
     try {
@@ -151,19 +147,16 @@ const TeacherDetail = () => {
             : [];
       if (isMounted.current) setSessions(normalised);
     } catch (err) {
-      console.error("Error fetching sessions:", err);
       if (isMounted.current) setSessions([]);
     }
   }, [teacherId, student?._id]);
 
-  // Refresh all data
   const refreshData = useCallback(async () => {
     setRefreshing(true);
     await Promise.all([fetchSlots(), fetchSessions()]);
     setRefreshing(false);
   }, [fetchSlots, fetchSessions]);
 
-  // Initial fetch
   useEffect(() => {
     if (teacherId) {
       fetchSlots();
@@ -171,7 +164,7 @@ const TeacherDetail = () => {
     }
   }, [teacherId, student?._id, fetchSlots, fetchSessions]);
 
-  // ✅ Real‑time socket listeners (matches backend events)
+  // Socket listeners
   useEffect(() => {
     if (!teacherId || !student?._id) return;
     if (!socket.connected) socket.connect();
@@ -181,11 +174,9 @@ const TeacherDetail = () => {
         session.teacher_id === teacherId &&
         session.student_id === student._id
       ) {
-        setSessions((prev) => {
-          if (prev.find((s) => s._id === session._id)) return prev;
-          return [...prev, session];
-        });
-        // Update slot booked status
+        setSessions((prev) =>
+          prev.find((s) => s._id === session._id) ? prev : [...prev, session],
+        );
         setSlots((prev) =>
           prev.map((s) =>
             s._id === session.slot_id
@@ -195,7 +186,6 @@ const TeacherDetail = () => {
         );
       }
     };
-
     const handleSessionUpdated = (session) => {
       if (
         session.teacher_id === teacherId &&
@@ -206,14 +196,10 @@ const TeacherDetail = () => {
         );
       }
     };
-
-    const handleSessionDeleted = ({ id }) => {
+    const handleSessionDeleted = ({ id }) =>
       setSessions((prev) => prev.filter((s) => s._id !== id));
-    };
-
-    const handleSlotDeleted = ({ slotId }) => {
+    const handleSlotDeleted = ({ slotId }) =>
       setSlots((prev) => prev.filter((s) => s._id !== slotId));
-    };
 
     socket.on("session_booked", handleSessionBooked);
     socket.on("session_updated", handleSessionUpdated);
@@ -232,11 +218,7 @@ const TeacherDetail = () => {
     sessions.filter((s) => s.slot_id === slotId);
 
   const bookSlot = async (slotId, slot, blockStartTime) => {
-    if (!student) {
-      alert("Please login to book a slot");
-      return;
-    }
-
+    if (!student) return alert("Please login to book a slot");
     const blockId = `${slotId}-${blockStartTime}`;
     setBookingId(blockId);
 
@@ -269,21 +251,17 @@ const TeacherDetail = () => {
         duration: 15,
         requested_time: requestedTimeIso,
       });
-
       const newSession = res.data?.session;
       const updatedSlot = res.data?.slot;
-
       setSessions((prev) =>
         prev.map((s) => (s._id === optimisticSession._id ? newSession : s)),
       );
-      if (updatedSlot) {
+      if (updatedSlot)
         setSlots((prev) =>
           prev.map((s) => (s._id === slotId ? updatedSlot : s)),
         );
-      }
     } catch (err) {
-      console.error("Booking error:", err);
-      // Rollback optimistic
+      // Rollback
       setSessions((prev) =>
         prev.filter((s) => s._id !== optimisticSession._id),
       );
@@ -310,10 +288,10 @@ const TeacherDetail = () => {
 
   if (loading && slots.length === 0) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="w-10 h-10 border-2 border-gray-200 border-t-blue-600 rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-sm text-gray-400 font-medium">
+          <div className="w-10 h-10 border-2 border-slate-200 border-t-slate-800 rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-slate-400 text-sm font-medium">
             Loading availability...
           </p>
         </div>
@@ -323,28 +301,25 @@ const TeacherDetail = () => {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
-        <div className="max-w-sm w-full bg-white border border-gray-100 rounded-2xl p-8 shadow-sm text-center">
-          <div className="w-12 h-12 bg-red-50 rounded-xl flex items-center justify-center mx-auto mb-4">
-            <AlertCircle className="h-5 w-5 text-red-400" />
-          </div>
-          <h3 className="text-base font-bold text-gray-900 mb-1">
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+        <div className="bg-white rounded-2xl p-8 text-center max-w-sm shadow-sm">
+          <AlertCircle className="h-10 w-10 text-rose-300 mx-auto mb-3" />
+          <h3 className="text-sm font-bold text-slate-800 mb-1">
             Something went wrong
           </h3>
-          <p className="text-gray-400 text-sm mb-5">{error}</p>
+          <p className="text-slate-400 text-sm mb-5">{error}</p>
           <div className="flex gap-3 justify-center">
             <button
               onClick={refreshData}
-              className="px-4 py-2 bg-gray-900 text-white text-sm font-bold rounded-xl hover:bg-gray-800 transition-all flex items-center gap-2"
+              className="px-4 py-2 bg-slate-800 text-white text-sm font-medium rounded-xl hover:bg-slate-700 transition"
             >
-              <RefreshCw className="h-4 w-4" />
-              Retry
+              <RefreshCw className="h-4 w-4 inline mr-1" /> Retry
             </button>
             <button
               onClick={() => router.back()}
-              className="inline-flex items-center gap-2 text-sm font-semibold text-blue-600 hover:underline"
+              className="text-sm text-blue-600 hover:underline"
             >
-              <ArrowLeft className="h-4 w-4" /> Back to Dashboard
+              ← Back
             </button>
           </div>
         </div>
@@ -353,23 +328,21 @@ const TeacherDetail = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <style>{`.scrollbar-none::-webkit-scrollbar{display:none}.scrollbar-none{-ms-overflow-style:none;scrollbar-width:none}`}</style>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
-        {/* Header with refresh */}
-        <div className="flex items-center justify-between mb-6">
-          <button
-            onClick={() => router.back()}
-            className="inline-flex items-center gap-2 text-sm text-gray-400 hover:text-gray-900 font-semibold transition-colors group"
+    <div className="min-h-screen bg-slate-50">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 md:py-8">
+        {/* Header */}
+        <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
+          <Link
+            href="/dashboard"
+            className="inline-flex items-center gap-1.5 text-sm text-slate-400 hover:text-slate-700 font-medium transition-colors group"
           >
             <ArrowLeft className="h-4 w-4 group-hover:-translate-x-0.5 transition-transform" />
             Back to Dashboard
-          </button>
+          </Link>
           <button
             onClick={refreshData}
             disabled={refreshing}
-            className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all disabled:opacity-50"
-            title="Refresh"
+            className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition disabled:opacity-50"
           >
             <RefreshCw
               className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`}
@@ -377,247 +350,224 @@ const TeacherDetail = () => {
           </button>
         </div>
 
-        {/* Page header */}
-        <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-2xl px-7 py-8 mb-6 relative overflow-hidden shadow-xl shadow-blue-100">
-          <div
-            className="absolute inset-0 opacity-[0.06]"
-            style={{
-              backgroundImage:
-                "linear-gradient(#fff 1px, transparent 1px), linear-gradient(90deg, #fff 1px, transparent 1px)",
-              backgroundSize: "24px 24px",
-            }}
-          />
-          <div className="absolute -top-10 -right-10 w-40 h-40 bg-sky-300/30 rounded-full blur-3xl pointer-events-none" />
-          <div className="relative flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="flex items-center gap-4">
-              <div className="w-11 h-11 bg-white/10 border border-white/15 rounded-xl flex items-center justify-center flex-shrink-0">
-                <GraduationCap className="h-5 w-5 text-white" />
-              </div>
+        {/* Hero Card */}
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden mb-8">
+          <div className="p-6 md:p-8">
+            <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-6">
               <div>
-                <p className="text-xs font-semibold text-blue-100 uppercase tracking-widest mb-0.5">
+                <div className="inline-flex items-center gap-2 px-3 py-1 bg-blue-50 text-blue-700 rounded-full text-xs font-medium mb-4">
+                  <Video className="h-3 w-3" />
                   1:1 Sessions
-                </p>
-                <h1 className="text-xl font-bold text-white tracking-tight">
+                </div>
+                <h1 className="text-2xl md:text-3xl font-bold text-slate-900 tracking-tight">
                   Available Sessions
                 </h1>
+                <p className="text-slate-500 text-sm mt-2">
+                  Book a 15‑minute slot with your instructor
+                </p>
+              </div>
+              <div className="flex gap-3">
+                <div className="bg-slate-50 rounded-xl px-4 py-2 text-center min-w-[80px]">
+                  <p className="text-xl font-bold text-slate-800">
+                    {totalAvailable}
+                  </p>
+                  <p className="text-[10px] text-slate-400 uppercase font-semibold">
+                    Open
+                  </p>
+                </div>
+                <div className="bg-slate-50 rounded-xl px-4 py-2 text-center min-w-[80px]">
+                  <p className="text-xl font-bold text-slate-800">
+                    {totalBooked}
+                  </p>
+                  <p className="text-[10px] text-slate-400 uppercase font-semibold">
+                    Booked
+                  </p>
+                </div>
               </div>
             </div>
-            <div className="flex gap-3">
-              <div className="bg-white/10 border border-white/20 rounded-xl px-4 py-2.5 text-center min-w-[72px]">
-                <p className="text-xl font-bold text-white">{totalAvailable}</p>
-                <p className="text-[10px] text-blue-100 font-bold uppercase tracking-wider">
-                  Open
-                </p>
+
+            {/* Session details row */}
+            <div className="flex flex-wrap gap-6 mt-6 pt-6 border-t border-slate-100">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 bg-slate-50 rounded-lg flex items-center justify-center">
+                  <User className="h-4 w-4 text-slate-400" />
+                </div>
+                <div>
+                  <p className="text-[10px] text-slate-400 uppercase font-semibold">
+                    Teacher
+                  </p>
+                  <p className="text-sm font-medium text-slate-700">
+                    ID: {teacherId?.slice(0, 8)}…
+                  </p>
+                </div>
               </div>
-              <div className="bg-white/10 border border-white/20 rounded-xl px-4 py-2.5 text-center min-w-[72px]">
-                <p className="text-xl font-bold text-white">{totalBooked}</p>
-                <p className="text-[10px] text-blue-100 font-bold uppercase tracking-wider">
-                  Booked
-                </p>
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 bg-slate-50 rounded-lg flex items-center justify-center">
+                  <Clock className="h-4 w-4 text-slate-400" />
+                </div>
+                <div>
+                  <p className="text-[10px] text-slate-400 uppercase font-semibold">
+                    Duration
+                  </p>
+                  <p className="text-sm font-medium text-slate-700">
+                    15 min per slot
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 bg-slate-50 rounded-lg flex items-center justify-center">
+                  <MapPin className="h-4 w-4 text-slate-400" />
+                </div>
+                <div>
+                  <p className="text-[10px] text-slate-400 uppercase font-semibold">
+                    Location
+                  </p>
+                  <p className="text-sm font-medium text-slate-700">
+                    Virtual (Video Call)
+                  </p>
+                </div>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Body grid */}
-        <div className="flex flex-col lg:flex-row gap-5">
-          {/* Sidebar */}
-          <aside className="w-full lg:w-64 flex-shrink-0 space-y-4">
-            <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
-              <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4">
-                Session Info
-              </p>
-              <div className="space-y-2.5">
-                {[
-                  {
-                    icon: User,
-                    label: "Teacher",
-                    value: `${teacherId?.slice(0, 10)}…`,
-                  },
-                  { icon: Video, label: "Format", value: "Online Video Call" },
-                  { icon: Clock, label: "Duration", value: "15 min / slot" },
-                  { icon: MapPin, label: "Location", value: "Virtual" },
-                ].map(({ icon: Icon, label, value }) => (
-                  <div key={label} className="flex items-center gap-3">
-                    <div className="w-8 h-8 bg-gray-50 border border-gray-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                      <Icon className="h-3.5 w-3.5 text-gray-400" />
-                    </div>
-                    <div>
-                      <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">
-                        {label}
-                      </p>
-                      <p className="text-sm font-semibold text-gray-800">
-                        {value}
-                      </p>
-                    </div>
-                  </div>
-                ))}
+        {/* Slots Panel */}
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+          <div className="px-6 py-4 border-b border-slate-100 flex items-center gap-2">
+            <CalendarDays className="h-4 w-4 text-slate-400" />
+            <h2 className="text-sm font-semibold text-slate-800">
+              Available Time Slots
+            </h2>
+            <span className="ml-auto px-2 py-0.5 bg-slate-100 text-slate-500 rounded-full text-xs font-medium">
+              {slots.length}
+            </span>
+          </div>
+
+          <div className="p-5">
+            {slots.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-16 text-center">
+                <div className="w-14 h-14 bg-slate-50 rounded-full flex items-center justify-center mb-4">
+                  <CalendarDays className="h-6 w-6 text-slate-300" />
+                </div>
+                <h3 className="text-sm font-semibold text-slate-800 mb-1">
+                  No sessions available
+                </h3>
+                <p className="text-xs text-slate-400 max-w-xs">
+                  This teacher hasn't added any availability yet.
+                </p>
               </div>
-            </div>
-          </aside>
+            ) : (
+              <div className="space-y-3">
+                {sortedDates.map((dateKey, idx) => {
+                  const dateSlots = grouped[dateKey];
+                  const d = formatDate(dateKey);
+                  const availSlots = dateSlots.filter((s) => !s.is_booked);
+                  const bookedSlots = dateSlots.filter((s) => s.is_booked);
+                  const isCollapsed = collapsedDates[dateKey];
 
-          {/* Slots Panel */}
-          <div className="flex-1 min-w-0">
-            <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
-              <div className="flex items-center gap-3 px-6 py-4 border-b border-gray-100">
-                <CalendarDays className="h-4 w-4 text-gray-400" />
-                <h2 className="text-sm font-bold text-gray-900">
-                  Session Slots
-                </h2>
-                <span className="ml-auto px-2 py-0.5 bg-gray-100 text-gray-500 rounded-full text-xs font-bold">
-                  {slots.length}
-                </span>
-              </div>
-
-              <div className="p-5">
-                {slots.length === 0 && (
-                  <div className="flex flex-col items-center justify-center py-20 text-center">
-                    <div className="w-12 h-12 bg-gray-50 rounded-xl flex items-center justify-center mb-4 border border-gray-100">
-                      <CalendarDays className="h-5 w-5 text-gray-300" />
-                    </div>
-                    <h3 className="text-sm font-bold text-gray-900 mb-1">
-                      No Sessions Available
-                    </h3>
-                    <p className="text-xs text-gray-400 max-w-xs">
-                      This teacher hasn't added any availability slots yet.
-                    </p>
-                  </div>
-                )}
-
-                {slots.length > 0 && sortedDates.length === 0 && (
-                  <div className="flex flex-col items-center justify-center py-20 text-center">
-                    <div className="w-12 h-12 bg-gray-50 rounded-xl flex items-center justify-center mb-4 border border-gray-100">
-                      <CalendarDays className="h-5 w-5 text-gray-300" />
-                    </div>
-                    <h3 className="text-sm font-bold text-gray-900 mb-1">
-                      No Slots Found
-                    </h3>
-                    <p className="text-xs text-gray-400 max-w-xs">
-                      No slots available at the moment.
-                    </p>
-                  </div>
-                )}
-
-                {sortedDates.length > 0 && (
-                  <div className="space-y-3">
-                    {sortedDates.map((dateKey, idx) => {
-                      const dateSlots = grouped[dateKey];
-                      const d = formatDate(dateKey);
-                      const availSlots = dateSlots.filter((s) => !s.is_booked);
-                      const bookedSlots = dateSlots.filter((s) => s.is_booked);
-                      const isCollapsed = collapsedDates[dateKey];
-
-                      return (
-                        <motion.div
-                          key={dateKey}
-                          initial={{ opacity: 0, y: 8 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ delay: idx * 0.05, duration: 0.25 }}
-                          className="border border-gray-100 rounded-xl overflow-hidden"
-                        >
-                          <button
-                            onClick={() => toggleDateCollapse(dateKey)}
-                            className="w-full px-5 py-3.5 bg-white flex items-center justify-between hover:bg-gray-50 transition-colors"
-                          >
-                            <div className="flex items-center gap-3">
-                              <div className="w-8 h-8 bg-gray-50 border border-gray-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                                <Calendar className="h-3.5 w-3.5 text-gray-400" />
-                              </div>
-                              <div className="text-left">
-                                <div className="flex items-center gap-2">
-                                  <h3 className="font-bold text-gray-900 text-sm">
-                                    {d.full}
-                                  </h3>
-                                  {d.isToday && (
-                                    <span className="text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-full uppercase">
-                                      Today
-                                    </span>
-                                  )}
-                                  {d.isTomorrow && (
-                                    <span className="text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200 px-2 py-0.5 rounded-full uppercase">
-                                      Tomorrow
-                                    </span>
-                                  )}
-                                </div>
-                                <p className="text-xs text-gray-400 mt-0.5">
-                                  {availSlots.length} open ·{" "}
-                                  {bookedSlots.length} booked
-                                </p>
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              {availSlots.length > 0 && (
-                                <span className="hidden sm:inline-flex text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 px-2.5 py-1 rounded-full uppercase">
-                                  {availSlots.length} open
+                  return (
+                    <motion.div
+                      key={dateKey}
+                      initial={{ opacity: 0, y: 6 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: idx * 0.05 }}
+                      className="border border-slate-100 rounded-xl overflow-hidden"
+                    >
+                      <button
+                        onClick={() => toggleDateCollapse(dateKey)}
+                        className="w-full px-5 py-3 bg-white flex items-center justify-between hover:bg-slate-50 transition-colors"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 bg-slate-50 rounded-lg flex items-center justify-center">
+                            <Calendar className="h-4 w-4 text-slate-400" />
+                          </div>
+                          <div className="text-left">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="font-semibold text-slate-800 text-sm">
+                                {d.full}
+                              </span>
+                              {d.isToday && (
+                                <span className="text-[10px] font-medium bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full">
+                                  Today
                                 </span>
                               )}
-                              {isCollapsed ? (
-                                <ChevronDown className="h-4 w-4 text-gray-300" />
-                              ) : (
-                                <ChevronUp className="h-4 w-4 text-gray-300" />
+                              {d.isTomorrow && (
+                                <span className="text-[10px] font-medium bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full">
+                                  Tomorrow
+                                </span>
                               )}
                             </div>
-                          </button>
+                            <p className="text-xs text-slate-400 mt-0.5">
+                              {availSlots.length} open · {bookedSlots.length}{" "}
+                              booked
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {availSlots.length > 0 && (
+                            <span className="hidden sm:inline-block text-[10px] font-medium bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full">
+                              {availSlots.length} available
+                            </span>
+                          )}
+                          {isCollapsed ? (
+                            <ChevronDown className="h-4 w-4 text-slate-300" />
+                          ) : (
+                            <ChevronUp className="h-4 w-4 text-slate-300" />
+                          )}
+                        </div>
+                      </button>
 
-                          <AnimatePresence>
-                            {!isCollapsed && (
-                              <motion.div
-                                initial={{ height: 0, opacity: 0 }}
-                                animate={{ height: "auto", opacity: 1 }}
-                                exit={{ height: 0, opacity: 0 }}
-                                transition={{ duration: 0.2 }}
-                                className="overflow-hidden"
-                              >
-                                <div className="border-t border-gray-100 bg-gray-50/50 p-4">
-                                  <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-none snap-x snap-mandatory">
-                                    {dateSlots.map((slot) => (
-                                      <div
-                                        key={slot._id}
-                                        className="flex-shrink-0 w-72 snap-start"
-                                      >
-                                        <SlotCard
-                                          slot={slot}
-                                          timeBlocks={generateTimeBlocks(slot)}
-                                          slotSessions={getSessionsForSlot(
-                                            slot._id,
-                                          )}
-                                          duration={getDuration(
-                                            slot.start_time,
-                                            slot.end_time,
-                                          )}
-                                          bookingId={bookingId}
-                                          onBook={(blockStartTime) =>
-                                            bookSlot(
-                                              slot._id,
-                                              slot,
-                                              blockStartTime,
-                                            )
-                                          }
-                                        />
-                                      </div>
-                                    ))}
+                      <AnimatePresence>
+                        {!isCollapsed && (
+                          <motion.div
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: "auto", opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            transition={{ duration: 0.2 }}
+                            className="overflow-hidden"
+                          >
+                            <div className="border-t border-slate-100 bg-slate-50/30 p-4">
+                              <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-none snap-x snap-mandatory">
+                                {dateSlots.map((slot) => (
+                                  <div
+                                    key={slot._id}
+                                    className="flex-shrink-0 w-72 snap-start"
+                                  >
+                                    <SlotCard
+                                      slot={slot}
+                                      timeBlocks={generateTimeBlocks(slot)}
+                                      slotSessions={getSessionsForSlot(
+                                        slot._id,
+                                      )}
+                                      duration={getDuration(
+                                        slot.start_time,
+                                        slot.end_time,
+                                      )}
+                                      bookingId={bookingId}
+                                      onBook={(blockStartTime) =>
+                                        bookSlot(slot._id, slot, blockStartTime)
+                                      }
+                                    />
                                   </div>
-                                  {dateSlots.length > 3 && (
-                                    <p className="text-[10px] text-gray-300 font-semibold uppercase tracking-widest text-right mt-2 pr-1">
-                                      Scroll for more →
-                                    </p>
-                                  )}
-                                </div>
-                              </motion.div>
-                            )}
-                          </AnimatePresence>
-                        </motion.div>
-                      );
-                    })}
-                  </div>
-                )}
+                                ))}
+                              </div>
+                              {dateSlots.length > 3 && (
+                                <p className="text-[10px] text-slate-300 font-medium text-right mt-2 pr-1">
+                                  Scroll for more →
+                                </p>
+                              )}
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </motion.div>
+                  );
+                })}
               </div>
-            </div>
+            )}
           </div>
         </div>
       </div>
     </div>
   );
-};
-
-export default TeacherDetail;
+}

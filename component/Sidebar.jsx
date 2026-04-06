@@ -23,6 +23,8 @@ export default function Sidebar({ isOpen, setIsOpen, mobile = false }) {
   const pathname = usePathname();
   const router = useRouter();
 
+
+
   const initials = student?.name
     ? student.name
         .split(" ")
