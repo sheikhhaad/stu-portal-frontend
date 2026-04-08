@@ -5,6 +5,7 @@ import { ChatProvider } from "./context/ChatContext";
 import { NotificationProvider } from "./context/NotificationContext";
 import { Toaster } from "react-hot-toast";
 import "./globals.css";
+import Script from "next/script";
 
 export const metadata = {
   title: "Student Portal",
@@ -15,8 +16,11 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en">
       <body className="antialiased">
-        {/* Load Jitsi API globally */}
-       
+         <Script
+          src='https://8x8.vc/vpaas-magic-cookie-dcf276331a0c4225821d9c60bd0aeb93/external_api.js'
+          strategy="lazyOnload"
+          async
+        />
         <StudentProvider>
           <EnrollMentProvider>
             <QueryProvider>
