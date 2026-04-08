@@ -2,6 +2,7 @@
 import { Menu, Bell, LogOut } from "lucide-react";
 import { useStudent } from "@/app/context/StudentContext";
 import NotificationBell from "./NotificationBell";
+import UserMenu from "./Avatar";
 
 export default function DashboardHeader({ onMenuClick }) {
   const { student, logout } = useStudent();
@@ -37,12 +38,7 @@ export default function DashboardHeader({ onMenuClick }) {
 
       <div className="flex items-center gap-4">
         <NotificationBell />
-        <button
-          onClick={logout}
-          className="p-2 hover:bg-red-50 rounded-lg transition-colors group"
-        >
-          <LogOut className="w-4 h-4 text-gray-300 group-hover:text-red-500 transition-colors" />
-        </button>
+        <UserMenu user={student} onSignOut={logout} />
       </div>
     </header>
   );

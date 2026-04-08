@@ -2,6 +2,7 @@
 "use client";
 
 import { Clock, Lock, Loader2, Video, Timer, ChevronRight } from "lucide-react";
+import Link from "next/link";
 import { useEffect, useState } from "react";
 
 // ── Helpers ──────────────────────────────────────────────────────
@@ -125,15 +126,13 @@ const TimeBlock = ({ block, slot, session, bookingId, onBook }) => {
           </span>
         ) : isAccepted && session ? (
           session.meeting_link && canJoin ? (
-            <a
-              href={session.meeting_link}
-              target="_blank"
-              rel="noopener noreferrer"
+            <Link
+              href={`/dashboard/one-to-one/${session._id}`}
               onClick={(e) => e.stopPropagation()}
               className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors"
             >
               <Video className="h-3 w-3" /> Join
-            </a>
+            </Link>
           ) : (
             <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2.5 py-1 rounded-lg bg-blue-50 border border-blue-200 text-blue-700">
               <Timer className="h-3 w-3" />{" "}

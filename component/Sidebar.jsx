@@ -78,31 +78,7 @@ export default function Sidebar({ isOpen, setIsOpen, mobile = false }) {
         })}
       </nav>
 
-      {/* User */}
-      <div className="px-3 py-4 border-t border-gray-100">
-        <div className="flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-gray-50 transition-all duration-200 cursor-pointer group">
-          <div className="w-9 h-9 bg-blue-600 rounded-lg flex items-center justify-center text-white text-xs font-semibold shrink-0 shadow-sm shadow-blue-100">
-            {initials}
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-gray-900 truncate">
-              {student?.name || "Student"}
-            </p>
-            <p className="text-[10px] text-gray-400 font-medium truncate uppercase tracking-wider">
-              {student?.rollNumber || ""}
-            </p>
-          </div>
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              logout();
-            }}
-            className="p-2 hover:bg-red-50 rounded-lg transition-colors group/logout"
-          >
-            <LogOut className="w-4 h-4 text-gray-300 group-hover:text-red-500 group/logout-hover:text-red-500 transition-colors" />
-          </button>
-        </div>
-      </div>
+    
     </div>
   );
 

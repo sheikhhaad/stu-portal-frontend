@@ -28,9 +28,9 @@ export default function Dashboard() {
 
   useEffect(() => {
     fetchEnrolledCourses();
-  }, [student]);
+  }, [student, student?.name]);
 
-  const firstName = student?.name?.split(" ")[0] || "Student";
+  const firstName = student?.name || "Student";
   const totalCourses = enrolledCourses.length;
 
   if (studentLoading || loading) {
