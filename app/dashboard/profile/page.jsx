@@ -1,40 +1,41 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import {
   User,
   Mail,
   Phone,
   Award,
-  Settings,
   Edit2,
   Save,
   X,
   Camera,
-  Bell,
-  Moon,
   ChevronRight,
   AlertCircle,
   Loader2,
   CheckCircle,
+  Upload,
 } from "lucide-react";
 import { useStudent } from "@/app/context/StudentContext";
 import { useRouter } from "next/navigation";
 import api from "@/app/lib/api";
 
 export default function ProfilePage() {
-  const { student } = useStudent();
+  const { student, refreshStudent } = useStudent();
   const [activeTab, setActiveTab] = useState("profile");
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [updateStatus, setUpdateStatus] = useState({ type: "", message: "" });
+  const [selectedFile, setSelectedFile] = useState(null);
+  const fileInputRef = useRef(null);
 
   const [formData, setFormData] = useState({
     name: "",
     email: "",
     phone: "",
     studentId: "",
+    profilePic: "",
   });
 
   const [isEditingProfile, setIsEditingProfile] = useState(false);
@@ -48,32 +49,73 @@ export default function ProfilePage() {
         email: student?.email || "",
         phone: student?.phone || "",
         studentId: student?.rollNumber || "",
+        profilePic: student?.profilePic || "",
       };
       setFormData(newFormData);
       setProfileForm(newFormData);
     }
   }, [student]);
 
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setSelectedFile(file);
+      // Preview the image locally
+      const previewUrl = URL.createObjectURL(file);
+      setProfileForm((prev) => ({ ...prev, profilePic: previewUrl }));
+    }
+  };
+
+  const triggerFileInput = () => {
+    fileInputRef.current.click();
+  };
+
   const handleSaveProfile = async () => {
     setIsLoading(true);
     setUpdateStatus({ type: "", message: "" });
 
     try {
-      const response = await api.put(
-        `/auth/student/update/${student?._id}`,
-        {
-          name: profileForm.name,
-          email: profileForm.email,
-          phone: profileForm.phone,
-        },
-        {
+      let response;
+      const updateData = {
+        email: profileForm.email,
+        phone: profileForm.phone,
+      };
+
+      if (selectedFile) {
+        // Send as multipart/form-data
+        const formDataToSend = new FormData();
+        formDataToSend.append("email", profileForm.email);
+        formDataToSend.append("phone", profileForm.phone);
+        formDataToSend.append("profilePic", selectedFile);
+
+        response = await api.put(`/auth/student/update/${student?._id}`, formDataToSend, {
           withCredentials: true,
-        },
-      );
+          headers: { "Content-Type": "multipart/form-data" },
+        });
+      } else {
+        // Send as JSON
+        response = await api.put(
+          `/auth/student/update/${student?._id}`,
+          updateData,
+          { withCredentials: true }
+        );
+      }
 
       if (response.status === 200) {
-        setFormData(profileForm);
+        // Update local state with new data from response
+        const updatedStudent = response.data.student;
+        const newFormData = {
+          name: updatedStudent?.name || profileForm.name,
+          email: updatedStudent?.email || profileForm.email,
+          phone: updatedStudent?.phone || profileForm.phone,
+          studentId: updatedStudent?.rollNumber || profileForm.studentId,
+          profilePic: updatedStudent?.profilePic || profileForm.profilePic,
+        };
+        setFormData(newFormData);
+        setProfileForm(newFormData);
         setIsEditingProfile(false);
+        setSelectedFile(null);
+        if (refreshStudent) await refreshStudent();
         setUpdateStatus({
           type: "success",
           message: "Profile updated successfully!",
@@ -86,6 +128,10 @@ export default function ProfilePage() {
         type: "error",
         message: error.response?.data?.message || "Failed to update profile",
       });
+      // Rollback preview if upload failed
+      if (selectedFile) {
+        setProfileForm((prev) => ({ ...prev, profilePic: formData.profilePic }));
+      }
       setTimeout(() => setUpdateStatus({ type: "", message: "" }), 3000);
     } finally {
       setIsLoading(false);
@@ -95,6 +141,7 @@ export default function ProfilePage() {
   const handleCancelEdit = () => {
     setProfileForm(formData);
     setIsEditingProfile(false);
+    setSelectedFile(null);
     setUpdateStatus({ type: "", message: "" });
   };
 
@@ -119,20 +166,6 @@ export default function ProfilePage() {
       </span>
     </button>
   );
-
-  const logout = async () => {
-    let res = await api.post(
-      `/auth/logout`,
-      {},
-      {
-        withCredentials: true,
-      },
-    );
-
-    if (res.status === 200) {
-      router.push("/");
-    }
-  };
 
   if (!student) {
     return (
@@ -195,18 +228,29 @@ export default function ProfilePage() {
         {/* Profile Info */}
         <div className="px-4 sm:px-6 pb-4 sm:pb-6">
           <div className="flex flex-col sm:flex-row sm:items-end -mt-8 sm:-mt-12">
-            {/* Avatar */}
+            {/* Avatar with file picker (always visible) */}
             <div className="relative mx-auto sm:mx-0">
               <div className="h-20 w-20 sm:h-24 sm:w-24 rounded-2xl border-4 border-white shadow-xl overflow-hidden bg-white">
                 <img
-                  src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${formData.name || "User"}`}
+                  src={profileForm.profilePic || "/default-avatar.png"}
                   alt="Profile"
                   className="h-full w-full object-cover"
                 />
               </div>
-              <button className="absolute -bottom-2 -right-2 bg-blue-600 text-white p-1 rounded-lg shadow-lg hover:bg-blue-700 transition-colors">
+              <button
+                onClick={triggerFileInput}
+                className="absolute -bottom-2 -right-2 bg-blue-600 text-white p-1 rounded-lg shadow-lg hover:bg-blue-700 transition-colors"
+              >
                 <Camera className="h-2 w-2 sm:h-3 sm:w-3" />
               </button>
+              {/* Hidden file input */}
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleFileChange}
+                accept="image/*"
+                className="hidden"
+              />
             </div>
 
             {/* Name and Basic Info */}
@@ -237,12 +281,10 @@ export default function ProfilePage() {
       {/* Tabs */}
       <div className="flex flex-wrap gap-1 sm:gap-2 border-b border-gray-200 pb-4">
         <TabButton id="profile" label="Profile Information" icon={User} />
-        <TabButton id="settings" label="Settings" icon={Settings} />
       </div>
 
       {/* Tab Content */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 sm:p-6">
-        {/* Profile Information Tab */}
         {activeTab === "profile" && (
           <div className="space-y-4 sm:space-y-6">
             <div className="flex items-center justify-between flex-wrap gap-2">
@@ -261,21 +303,39 @@ export default function ProfilePage() {
             </div>
 
             {isEditingProfile ? (
-              // Edit Mode
-              <div className="space-y-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">
-                      Full Name
-                    </label>
-                    <input
-                      type="text"
-                      name="name"
-                      value={profileForm.name}
-                      onChange={handleInputChange}
-                      className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 sm:px-4 py-2 sm:py-3 text-sm text-gray-900 outline-none focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/10 transition-all"
-                    />
+              // Edit Mode with profile picture upload section
+              <div className="space-y-6">
+                {/* Profile Picture Upload Section (explicit in edit form) */}
+                <div className="border border-gray-200 rounded-xl p-4 bg-gray-50">
+                  <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-3">
+                    Profile Picture
+                  </label>
+                  <div className="flex items-center space-x-4">
+                    <div className="h-16 w-16 rounded-full overflow-hidden bg-gray-200 border-2 border-gray-300">
+                      <img
+                        src={profileForm.profilePic || "/default-avatar.png"}
+                        alt="Preview"
+                        className="h-full w-full object-cover"
+                      />
+                    </div>
+                    <div className="flex-1">
+                      <button
+                        type="button"
+                        onClick={triggerFileInput}
+                        className="inline-flex items-center px-3 py-1.5 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                      >
+                        <Upload className="h-4 w-4 mr-1" />
+                        Change Picture
+                      </button>
+                      <p className="text-xs text-gray-500 mt-1">
+                        JPG, PNG or GIF. Max 2MB.
+                      </p>
+                    </div>
                   </div>
+                </div>
+
+                {/* Email and Phone fields */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">
                       Email
@@ -378,66 +438,6 @@ export default function ProfilePage() {
                 </div>
               </div>
             )}
-          </div>
-        )}
-
-        {/* Settings Tab */}
-        {activeTab === "settings" && (
-          <div className="space-y-4 sm:space-y-6">
-            <h3 className="text-base sm:text-lg font-semibold text-gray-900">
-              Account Settings
-            </h3>
-
-            <div className="space-y-3 sm:space-y-4">
-              {/* Notification Settings */}
-              <div className="border border-gray-200 rounded-lg p-3 sm:p-4">
-                <h4 className="font-medium text-gray-900 flex items-center mb-3 sm:mb-4 text-sm sm:text-base">
-                  <Bell className="h-4 w-4 sm:h-5 sm:w-5 mr-2 text-blue-600" />
-                  Notification Preferences
-                </h4>
-                <div className="space-y-2 sm:space-y-3">
-                  {[
-                    "Email notifications",
-                    "Push notifications",
-                    "SMS alerts",
-                    "Query updates",
-                  ].map((item, index) => (
-                    <div
-                      key={index}
-                      className="flex items-center justify-between flex-wrap gap-2"
-                    >
-                      <span className="text-xs sm:text-sm text-gray-700">
-                        {item}
-                      </span>
-                      <label className="relative inline-flex items-center cursor-pointer">
-                        <input
-                          type="checkbox"
-                          className="sr-only peer"
-                          defaultChecked={index < 2}
-                        />
-                        <div className="w-9 h-5 sm:w-11 sm:h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 sm:after:h-5 sm:after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                      </label>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Danger Zone */}
-              <div className="border border-red-200 rounded-lg p-3 sm:p-4 bg-red-50">
-                <h4 className="font-medium text-red-600 flex items-center mb-3 sm:mb-4 text-sm sm:text-base">
-                  <AlertCircle className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
-                  Danger Zone
-                </h4>
-                <div className="space-y-2 sm:space-y-3">
-                  <button
-                    onClick={logout}
-                    className="w-full text-left px-3 sm:px-4 py-1.5 sm:py-2 bg-white border border-red-200 text-red-600 rounded-lg hover:bg-red-50 transition-colors text-xs sm:text-sm font-medium"
-                  >
-                    Logout Account
-                  </button>
-                </div>
-              </div>
-            </div>
           </div>
         )}
       </div>
