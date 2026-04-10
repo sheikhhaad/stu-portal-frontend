@@ -90,7 +90,6 @@ export default function ProfilePage() {
 
         response = await api.put(`/auth/student/update/${student?._id}`, formDataToSend, {
           withCredentials: true,
-          headers: { "Content-Type": "multipart/form-data" },
         });
       } else {
         // Send as JSON
