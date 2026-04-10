@@ -2,7 +2,6 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import Link from "next/link";
-import Image from "next/image";
 
 export default function UserMenu({ user, onSignOut }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -83,11 +82,9 @@ export default function UserMenu({ user, onSignOut }) {
       >
         <div className="relative w-full h-full rounded-full overflow-hidden bg-gray-100 border border-gray-100">
           {user?.profilePic && user.profilePic !== "" ? (
-            <Image
-              src={user.profilePic}
+            <img
+              src={user?.profilePic}
               alt={user.name || "User"}
-              fill
-              sizes="40px"
               className="object-cover"
             />
           ) : (
