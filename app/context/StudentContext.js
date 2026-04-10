@@ -9,39 +9,46 @@ const StudentContext = createContext();
 export function StudentProvider({ children }) {
   const [student, setStudent] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [notifications, setNotifications] = useState([]);
   const router = useRouter();
   const pathname = usePathname();
 
   useEffect(() => {
+    let isMounted = true;
+
     const fetchStudent = async () => {
+      // No need to fetch on auth pages
+      if (pathname.startsWith("/auth")) {
+        if (isMounted) setLoading(false);
+        return;
+      }
+
       try {
-        if (pathname.startsWith("/auth")) {
-          setLoading(false);
-          return;
-        }
         const res = await api.get("/auth/student/me");
-        setStudent(res.data.student);
+        if (isMounted) {
+          setStudent(res.data.student);
+          setLoading(false);
+        }
       } catch (err) {
+        // Redirect to login – component will unmount, no need to set loading false
         router.push("/auth/login");
-      } finally {
-        setLoading(false);
       }
     };
 
     fetchStudent();
-  }, []);
-  let logout = () => {
-    let res = api.post("/auth/logout");
+
+    return () => {
+      isMounted = false;
+    };
+  }, [pathname, router]);
+
+  const logout = async () => {
+    await api.post("/auth/logout");
     setStudent(null);
     router.push("/auth/login");
   };
 
   return (
-    <StudentContext.Provider
-      value={{ notifications, student, loading, error, logout, setStudent }}
-    >
+    <StudentContext.Provider value={{ student, loading, logout, setStudent }}>
       {children}
     </StudentContext.Provider>
   );
@@ -49,7 +56,6 @@ export function StudentProvider({ children }) {
 
 export function useStudent() {
   const context = useContext(StudentContext);
-  if (!context)
-    throw new Error("useStudent must be used within a StudentProvider");
+  if (!context) throw new Error("useStudent must be used within a StudentProvider");
   return context;
 }

@@ -1,8 +1,9 @@
 "use client";
-import { GraduationCap, BookOpen, RefreshCw, AlertCircle, CalendarDays } from "lucide-react";
+
+import { GraduationCap, BookOpen, RefreshCw, AlertCircle } from "lucide-react";
 import { useStudent } from "@/app/context/StudentContext";
 import CourseCard from "@/component/CourseCard";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import api from "@/app/lib/api";
 import { motion } from "framer-motion";
 
@@ -12,8 +13,8 @@ export default function Dashboard() {
   const [error, setError] = useState(null);
   const { student, loading: studentLoading } = useStudent();
 
-  const fetchEnrolledCourses = async () => {
-    if (!student) return;
+  const fetchEnrolledCourses = useCallback(async () => {
+    if (!student?._id) return;
     try {
       setLoading(true);
       setError(null);
@@ -24,15 +25,16 @@ export default function Dashboard() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [student?._id]);
 
   useEffect(() => {
     fetchEnrolledCourses();
-  }, [student, student?.name]);
+  }, [fetchEnrolledCourses]);
 
   const firstName = student?.name || "Student";
   const totalCourses = enrolledCourses.length;
 
+  // Loading state
   if (studentLoading || loading) {
     return (
       <div className="max-w-6xl mx-auto space-y-6 px-4 sm:px-0">
@@ -54,6 +56,7 @@ export default function Dashboard() {
     );
   }
 
+  // Error state
   if (error) {
     return (
       <div className="max-w-6xl mx-auto px-4 sm:px-0">
@@ -72,11 +75,10 @@ export default function Dashboard() {
     );
   }
 
-  // Quick stats data
+  // Real stats (only active courses for now)
   const stats = [
     { label: "Active Courses", value: totalCourses, icon: BookOpen, color: "text-blue-600 bg-blue-50" },
-    { label: "Completed", value: "—", icon: GraduationCap, color: "text-emerald-600 bg-emerald-50" },
-    { label: "In Progress", value: totalCourses, icon: CalendarDays, color: "text-amber-600 bg-amber-50" },
+    { label: "Enrolled", value: totalCourses, icon: GraduationCap, color: "text-emerald-600 bg-emerald-50" },
   ];
 
   return (
@@ -86,7 +88,7 @@ export default function Dashboard() {
       transition={{ duration: 0.3 }}
       className="max-w-6xl mx-auto space-y-7 px-4 sm:px-0"
     >
-      {/* Welcome card (clean white) */}
+      {/* Welcome card */}
       <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
         <div className="p-6 md:p-8">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-5">
@@ -105,7 +107,7 @@ export default function Dashboard() {
       </div>
 
       {/* Quick Stats Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {stats.map((stat, idx) => (
           <motion.div
             key={stat.label}
