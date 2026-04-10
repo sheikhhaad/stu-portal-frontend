@@ -81,18 +81,18 @@ export default function UserMenu({ user, onSignOut }) {
         aria-haspopup="true"
         aria-label="User menu"
       >
-        <div className="relative w-full h-full rounded-full overflow-hidden bg-gray-200">
-          {user?.avatar ? (
+        <div className="relative w-full h-full rounded-full overflow-hidden bg-gray-100 border border-gray-100">
+          {user?.profilePic && user.profilePic !== "" ? (
             <Image
-              src={user.avatar}
-              alt={`${user.name || "User"}'s avatar`}
+              src={user.profilePic}
+              alt={user.name || "User"}
               fill
               sizes="40px"
               className="object-cover"
             />
           ) : (
-            <div className="w-full h-full flex items-center justify-center bg-gray-300 text-gray-600 text-sm font-medium">
-              {user?.name?.[0]?.toUpperCase() || "U"}
+            <div className="w-full h-full flex items-center justify-center bg-blue-50 text-blue-600 text-xs font-bold uppercase">
+              {user?.name ? user.name.split(" ").map(n => n[0]).join("").slice(0, 2) : "UN"}
             </div>
           )}
         </div>
