@@ -192,6 +192,12 @@ export default function Page() {
                     autoComplete="current-password"
                     className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 pr-14 text-sm text-gray-900 placeholder-gray-300 outline-none focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/10 transition-all"
                   />
+                  <Link
+                    href="/auth/forgot-password"
+                    className="text-blue-600 text-right text-xs hover:underline"
+                  >
+                    Forgot Password?
+                  </Link>
                   <button
                     type="button"
                     onClick={() => setShowPass(!showPass)}
@@ -491,6 +497,7 @@ export default function Page() {
         </AnimatePresence>
 
         {/* Footer */}
+
         <p className="text-center text-xs text-gray-400 mt-6">
           Don't have an account?{" "}
           <Link
