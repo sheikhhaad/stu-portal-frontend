@@ -4,7 +4,18 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useChatContext } from "@/app/context/ChatContext";
-import { ArrowLeft, Phone, Video, MoreVertical, Send, Check, CheckCheck } from "lucide-react";
+import {
+  ArrowLeft,
+  Phone,
+  Video,
+  MoreVertical,
+  Send,
+  Check,
+  CheckCheck,
+  MessageSquare,
+  RefreshCw,
+} from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 
 const StudentChatPage = () => {
   const { id: teacher_id } = useParams();
@@ -46,25 +57,30 @@ const StudentChatPage = () => {
       if (isMounted) setLoadingTeacher(false);
     };
     loadTeacher();
-    return () => { isMounted = false; };
+    return () => {
+      isMounted = false;
+    };
   }, [teacher_id, fetchingTeachers, getOrFetchTeacherDetails]);
 
-  const handleSend = useCallback(async (e) => {
-    e?.preventDefault();
-    if (!newMessage.trim() || localSendingMessage || sendingMessage) return;
-    const text = newMessage;
-    setLocalSendingMessage(true);
-    setNewMessage("");
-    inputRef.current?.focus();
-    try {
-      await sendMessage(teacher_id, text);
-    } catch (error) {
-      console.error("Failed to send message:", error);
-      setNewMessage(text);
-    } finally {
-      setLocalSendingMessage(false);
-    }
-  }, [newMessage, localSendingMessage, sendingMessage, sendMessage, teacher_id]);
+  const handleSend = useCallback(
+    async (e) => {
+      e?.preventDefault();
+      if (!newMessage.trim() || localSendingMessage || sendingMessage) return;
+      const text = newMessage;
+      setLocalSendingMessage(true);
+      setNewMessage("");
+      inputRef.current?.focus();
+      try {
+        await sendMessage(teacher_id, text);
+      } catch (error) {
+        console.error("Failed to send message:", error);
+        setNewMessage(text);
+      } finally {
+        setLocalSendingMessage(false);
+      }
+    },
+    [newMessage, localSendingMessage, sendingMessage, sendMessage, teacher_id],
+  );
 
   const handleKeyDown = (e) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -80,7 +96,7 @@ const StudentChatPage = () => {
   // Deduplicate messages
   const uniqueMessages = useCallback(() => {
     const map = new Map();
-    messages.forEach(msg => {
+    messages.forEach((msg) => {
       const key = `${msg.message}_${msg.createdAt}_${msg.sender_role}`;
       if (!map.has(key) || (!msg._isOptimistic && map.get(key)._isOptimistic)) {
         map.set(key, msg);
@@ -92,9 +108,11 @@ const StudentChatPage = () => {
   if (!teacher_id || loadingTeacher || fetchingTeachers) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <div className="text-center bg-white p-6 rounded-xl shadow-sm">
-          <div className="animate-spin rounded-full h-10 w-10 border-2 border-slate-200 border-t-slate-800 mx-auto" />
-          <p className="mt-4 text-slate-500 text-sm">Connecting...</p>
+        <div className="text-center bg-white p-8 rounded-3xl shadow-sm border border-slate-100">
+          <div className="w-12 h-12 border-4 border-slate-100 border-t-blue-600 rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-slate-400 text-sm font-bold uppercase tracking-widest">
+            Initialising Chat...
+          </p>
         </div>
       </div>
     );
@@ -104,127 +122,162 @@ const StudentChatPage = () => {
   const teacherInitial = teacherName.charAt(0).toUpperCase();
 
   return (
-    <div className="min-h-screen bg-slate-50 py-4 px-4 sm:px-6 flex items-center justify-center">
-      <div className="w-full max-w-4xl h-[90vh] bg-white rounded-xl shadow-sm border border-slate-100 flex flex-col overflow-hidden">
-        {/* Header */}
-        <div className="px-5 py-3 border-b border-slate-100 flex items-center justify-between bg-white">
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => router.push("/dashboard/chat")}
-              className="p-1.5 -ml-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-50 transition"
-            >
-              <ArrowLeft className="h-5 w-5" />
-            </button>
-            <div className="relative">
-              <div className="w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center">
-                <span className="text-slate-700 font-semibold text-sm">{teacherInitial}</span>
-              </div>
-              <div className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 border-2 border-white rounded-full" />
+    <div className="min-h-screen bg-slate-50 p-4 md:p-6 flex flex-col max-w-6xl mx-auto">
+      {/* Header Card */}
+      <motion.div
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="bg-white rounded-2xl shadow-sm border border-slate-100 p-4 mb-4 flex items-center justify-between"
+      >
+        <div className="flex items-center gap-4">
+          <button
+            onClick={() => router.push("/dashboard/chat")}
+            className="p-2 hover:bg-slate-50 rounded-xl text-slate-400 hover:text-slate-600 transition-colors"
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </button>
+          <div className="relative">
+            <div className="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center text-blue-600 text-xl font-bold">
+              {teacherInitial}
             </div>
-            <div>
-              <h2 className="font-semibold text-slate-800">{teacherName}</h2>
-              <p className="text-[11px] text-slate-400 flex items-center gap-1">
-                <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full" />
-                Online
-              </p>
-            </div>
+            <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-emerald-500 border-2 border-white rounded-full shadow-sm" />
           </div>
-          <div className="flex gap-1">
-            <button className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-lg transition">
-              <Phone className="h-4 w-4" />
-            </button>
-            <button className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-lg transition">
-              <Video className="h-4 w-4" />
-            </button>
-            <button className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-lg transition">
-              <MoreVertical className="h-4 w-4" />
-            </button>
+          <div>
+            <h2 className="text-lg font-bold text-slate-800">{teacherName}</h2>
+            <div className="flex items-center gap-2">
+              <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                Active Now
+              </span>
+            </div>
           </div>
         </div>
+        <div className="flex items-center gap-1">
+          <button className="p-2.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all">
+            <Phone className="h-4.5 w-4.5" />
+          </button>
+          <button className="p-2.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all">
+            <Video className="h-4.5 w-4.5" />
+          </button>
+          <button className="p-2.5 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-xl transition-all">
+            <MoreVertical className="h-4.5 w-4.5" />
+          </button>
+        </div>
+      </motion.div>
 
-        {/* Messages area */}
-        <div className="flex-1 overflow-y-auto p-5 bg-slate-50/30 space-y-4">
-          {loadingMessages && uniqueMessages.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-full">
-              <div className="animate-spin rounded-full h-8 w-8 border-2 border-slate-200 border-t-slate-600" />
-              <p className="mt-3 text-xs text-slate-400">Loading messages...</p>
-            </div>
-          ) : uniqueMessages.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-full text-center">
-              <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4">
-                <svg className="w-7 h-7 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                </svg>
+      {/* Main Chat Area */}
+      <div className="flex-1 bg-white rounded-3xl shadow-sm border border-slate-100 flex flex-col overflow-hidden relative">
+        {/* Messages */}
+        <div className="flex-1 overflow-y-auto p-6 space-y-6 scrollbar-thin scrollbar-thumb-slate-200">
+          <AnimatePresence initial={false}>
+            {uniqueMessages.length === 0 ? (
+              <div className="h-full flex flex-col items-center justify-center text-center p-10">
+                <div className="w-20 h-20 bg-slate-50 rounded-[2.5rem] flex items-center justify-center mb-6">
+                  <MessageSquare className="w-8 h-8 text-slate-200" />
+                </div>
+                <h3 className="text-slate-800 font-bold text-lg mb-2">
+                  Start a conversation
+                </h3>
+                <p className="text-slate-400 text-sm max-w-xs mx-auto leading-relaxed">
+                  Connect with {teacherName} and discuss your course queries
+                  directly.
+                </p>
               </div>
-              <h3 className="text-sm font-semibold text-slate-700">No messages yet</h3>
-              <p className="text-xs text-slate-400 max-w-xs mt-1">Send a message to start the conversation.</p>
-            </div>
-          ) : (
-            uniqueMessages.map((msg, idx) => {
-              const isStudent = msg.sender_role === "student";
-              const isOptimistic = msg._isOptimistic === true;
-              const time = new Date(msg.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+            ) : (
+              uniqueMessages.map((msg, idx) => {
+                const isStudent = msg.sender_role === "student";
+                const isOptimistic = msg._isOptimistic === true;
+                const time = new Date(msg.createdAt).toLocaleTimeString([], {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                });
 
-              return (
-                <div key={msg._id || idx} className={`flex ${isStudent ? "justify-end" : "justify-start"}`}>
-                  <div className={`flex max-w-[80%] ${isStudent ? "flex-row-reverse" : "flex-row"} items-end gap-2`}>
-                    {!isStudent && (
-                      <div className="w-7 h-7 bg-slate-200 rounded-full flex items-center justify-center flex-shrink-0">
-                        <span className="text-slate-600 text-xs font-medium">{teacherInitial}</span>
-                      </div>
-                    )}
-                    <div className="flex flex-col">
-                      <div className={`px-4 py-2.5 rounded-2xl ${isStudent ? "bg-slate-800 text-white rounded-tr-sm" : "bg-white border border-slate-100 text-slate-700 rounded-tl-sm shadow-sm"}`}>
-                        <p className="text-sm leading-relaxed break-words whitespace-pre-wrap">{msg.message}</p>
-                      </div>
-                      <div className={`flex items-center gap-1 mt-1 text-[10px] ${isStudent ? "justify-end" : "justify-start"}`}>
-                        <span className="text-slate-400">{time}</span>
-                        {isStudent && (
-                          isOptimistic ? (
-                            <div className="w-3 h-3 border border-slate-300 border-t-slate-600 rounded-full animate-spin" />
-                          ) : (
-                            <CheckCheck className="w-3 h-3 text-slate-400" />
-                          )
-                        )}
+                return (
+                  <motion.div
+                    key={msg._id || idx}
+                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    className={`flex ${isStudent ? "justify-end" : "justify-start"}`}
+                  >
+                    <div
+                      className={`flex max-w-[85%] sm:max-w-[70%] items-end gap-3 ${isStudent ? "flex-row-reverse" : "flex-row"}`}
+                    >
+                      {!isStudent && (
+                        <div className="w-8 h-8 bg-slate-100 rounded-xl flex items-center justify-center shrink-0 border border-slate-200">
+                          <span className="text-slate-500 text-xs font-bold">
+                            {teacherInitial}
+                          </span>
+                        </div>
+                      )}
+                      <div className="flex flex-col gap-1">
+                        <div
+                          className={`px-5 py-3 rounded-2xl text-sm font-medium leading-relaxed shadow-sm ${
+                            isStudent
+                              ? "bg-slate-800 text-white rounded-br-none"
+                              : "bg-white border border-slate-100 text-slate-700 rounded-bl-none"
+                          }`}
+                        >
+                          {msg.message}
+                        </div>
+                        <div
+                          className={`flex items-center gap-1.5 px-1 ${isStudent ? "justify-end" : "justify-start"}`}
+                        >
+                          <span className="text-[9px] font-bold text-slate-400 uppercase">
+                            {time}
+                          </span>
+                          {isStudent &&
+                            (isOptimistic ? (
+                              <RefreshCw className="w-2.5 h-2.5 text-slate-300 animate-spin" />
+                            ) : (
+                              <CheckCheck className="w-3 h-3 text-blue-500" />
+                            ))}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                </div>
-              );
-            })
-          )}
+                  </motion.div>
+                );
+              })
+            )}
+          </AnimatePresence>
           <div ref={messagesEndRef} />
         </div>
 
-        {/* Input area */}
-        <div className="bg-white border-t border-slate-100 p-4">
-          <form onSubmit={handleSend} className="flex items-center gap-2">
+        {/* Input Area */}
+        <div className="p-6 bg-slate-50/50 border-t border-slate-50">
+          <form
+            onSubmit={handleSend}
+            className="flex items-center gap-3 bg-white p-2 rounded-2xl border border-slate-100 shadow-sm focus-within:border-blue-200 focus-within:ring-4 focus-within:ring-blue-500/5 transition-all"
+          >
             <input
               ref={inputRef}
               type="text"
               value={newMessage}
               onChange={(e) => setNewMessage(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Type a message..."
+              placeholder={`Message ${teacherName}...`}
               disabled={localSendingMessage || sendingMessage}
-              className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-300 disabled:opacity-50 transition"
+              className="flex-1 bg-transparent px-4 py-2 text-sm text-slate-700 placeholder-slate-400 outline-none disabled:opacity-50"
             />
             <button
               type="submit"
-              disabled={!newMessage.trim() || localSendingMessage || sendingMessage}
-              className="bg-slate-800 hover:bg-slate-700 disabled:bg-slate-200 disabled:cursor-not-allowed text-white p-2.5 rounded-xl transition-all shrink-0"
+              disabled={
+                !newMessage.trim() || localSendingMessage || sendingMessage
+              }
+              className="bg-slate-800 hover:bg-slate-900 disabled:bg-slate-100 disabled:cursor-not-allowed text-white p-3 rounded-xl transition-all shadow-lg shadow-slate-100"
             >
               {localSendingMessage || sendingMessage ? (
-                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                <RefreshCw className="h-5 w-5 animate-spin" />
               ) : (
                 <Send className="h-5 w-5" />
               )}
             </button>
           </form>
-          <p className="text-[10px] text-slate-300 text-center mt-2 flex items-center justify-center gap-1">
-            <span className="inline-block w-1 h-1 bg-slate-300 rounded-full" />
-            End-to-end encrypted
-          </p>
+          <div className="mt-3 flex items-center justify-center gap-1.5">
+            <div className="w-1 h-1 bg-emerald-500 rounded-full" />
+            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">
+              Secure encrypted channel
+            </p>
+          </div>
         </div>
       </div>
     </div>

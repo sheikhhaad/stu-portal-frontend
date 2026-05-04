@@ -1,15 +1,16 @@
 "use client";
 import { useEffect, useState, useCallback } from "react";
 import { useStudent } from "@/app/context/StudentContext";
+import { useEnrollMent } from "@/app/context/TeacherEnroll";
 import api from "@/app/lib/api";
 import { motion } from "framer-motion";
-import { Bell, Calendar, Megaphone } from "lucide-react";
+import { Bell, Calendar, Megaphone, Info } from "lucide-react";
 import { socket } from "@/app/lib/socket";
 
 export default function NoticesPage() {
   const { student } = useStudent();
+  const { course: enrolledCourses, loading: enrollLoading } = useEnrollMent();
   const [notices, setNotices] = useState([]);
-  const [enrolledCourses, setEnrolledCourses] = useState([]);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
 
   // Helper: add course name to an announcement
@@ -32,13 +33,9 @@ export default function NoticesPage() {
 
   // Fetch all notices (initial load)
   const fetchAllNotices = useCallback(async () => {
-    if (!student?._id) return;
+    if (!student?._id || !enrolledCourses) return;
     try {
-      // 1. get enrolled courses
-      const enrollmentRes = await api.get(`/enrollments/student/${student._id}`);
-      const courses = enrollmentRes.data.courses || [];
-      setEnrolledCourses(courses);
-      const courseIds = courses.map((c) => c._id);
+      const courseIds = enrolledCourses.map((c) => c._id);
 
       // 2. get all announcements
       const annRes = await api.get(`/announcements`);
@@ -48,7 +45,7 @@ export default function NoticesPage() {
       let filtered = allAnnouncements
         .filter((ann) => courseIds.includes(ann.course_id))
         .map((ann) => {
-          const course = courses.find((c) => c._id === ann.course_id);
+          const course = enrolledCourses.find((c) => c._id === ann.course_id);
           return { ...ann, courseName: course?.title || course?.name };
         });
 
@@ -60,11 +57,12 @@ export default function NoticesPage() {
     } finally {
       setIsInitialLoading(false);
     }
-  }, [student?._id]);
+  }, [student?._id, enrolledCourses]);
 
   // ---- Socket listeners (real-time) ----
   useEffect(() => {
-    if (!student?._id || enrolledCourses.length === 0) return;
+    if (!student?._id || !enrolledCourses || enrolledCourses.length === 0)
+      return;
 
     if (!socket.connected) socket.connect();
 
@@ -94,14 +92,18 @@ export default function NoticesPage() {
           const exists = prev.some((n) => n._id === enriched._id);
           if (!exists) return prev; // should exist, but just in case
           const updatedList = prev.map((n) =>
-            n._id === enriched._id ? enriched : n
+            n._id === enriched._id ? enriched : n,
           );
-          updatedList.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+          updatedList.sort(
+            (a, b) => new Date(b.createdAt) - new Date(a.createdAt),
+          );
           return updatedList;
         });
       } else {
         // If updated announcement no longer belongs to student, remove it
-        setNotices((prev) => prev.filter((n) => n._id !== updatedAnnouncement._id));
+        setNotices((prev) =>
+          prev.filter((n) => n._id !== updatedAnnouncement._id),
+        );
       }
     };
 
@@ -118,37 +120,73 @@ export default function NoticesPage() {
 
   // Initial data load
   useEffect(() => {
-    fetchAllNotices();
-  }, [fetchAllNotices]);
+    if (enrolledCourses.length > 0 || !enrollLoading) {
+      fetchAllNotices();
+    }
+  }, [fetchAllNotices, enrolledCourses, enrollLoading]);
 
-  if (isInitialLoading) {
+  if (isInitialLoading || enrollLoading) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+      <div className="max-w-6xl mx-auto space-y-6 px-4 sm:px-0">
+        <div className="bg-white rounded-2xl h-32 animate-pulse border border-slate-100" />
+        <div className="space-y-4">
+          {[1, 2, 3].map((i) => (
+            <div
+              key={i}
+              className="bg-slate-100 rounded-xl h-24 animate-pulse"
+            />
+          ))}
+        </div>
       </div>
     );
   }
+
+  const stats = [
+    {
+      label: "Total Notices",
+      value: notices.length,
+      icon: Megaphone,
+      color: "text-blue-600 bg-blue-50",
+    },
+    {
+      label: "Active Courses",
+      value: enrolledCourses.length,
+      icon: Info,
+      color: "text-emerald-600 bg-emerald-50",
+    },
+  ];
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
-      className="max-w-8xl mx-auto space-y-4"
+      className="max-w-6xl mx-auto space-y-7 px-4 sm:px-0"
     >
-      {/* Header */}
-      <div className="flex items-center gap-3 pb-3 border-b border-gray-100">
-        <div className="w-9 h-9 bg-blue-600 rounded-xl flex items-center justify-center shrink-0">
-          <Megaphone className="w-4 h-4 text-white" />
-        </div>
-        <div>
-          <h1 className="text-base font-semibold text-gray-900 leading-tight">
-            Teacher Notices
-          </h1>
-          <p className="text-xs text-gray-400">
-            Academic announcements from your instructors
-          </p>
-        </div>
+      {/* Welcome/Header */}
+      <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-6">
+        <h1 className="text-xl font-bold text-slate-800">Teacher Notices</h1>
+        <p className="text-slate-500 text-sm mt-1">
+          Academic announcements from your instructors
+        </p>
+      </div>
+
+      {/* Stats */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {stats.map((stat) => (
+          <div
+            key={stat.label}
+            className="bg-white rounded-xl p-5 border border-slate-100 flex justify-between"
+          >
+            <div>
+              <p className="text-xs text-slate-400">{stat.label}</p>
+              <p className="text-2xl font-bold">{stat.value}</p>
+            </div>
+            <div className={`${stat.color} p-2 rounded-lg`}>
+              <stat.icon className="w-5 h-5" />
+            </div>
+          </div>
+        ))}
       </div>
 
       {notices.length === 0 ? (
@@ -164,21 +202,21 @@ export default function NoticesPage() {
           </p>
         </div>
       ) : (
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-4">
           {notices.map((notice, i) => (
             <motion.div
               key={notice._id}
               initial={{ opacity: 0, y: 6 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.05, duration: 0.3 }}
-              className="bg-white rounded-xl border border-gray-100 p-4 hover:border-blue-100 hover:shadow-sm transition-all"
+              className="bg-white rounded-xl border border-slate-100 p-5 hover:border-blue-100 hover:shadow-md transition-all group"
             >
-              <div className="flex flex-wrap items-center gap-2 mb-2">
-                <span className="px-2 py-0.5 bg-blue-600 text-white rounded-md text-[11px] font-medium">
+              <div className="flex flex-wrap items-center gap-2 mb-3">
+                <span className="px-2.5 py-1 bg-blue-600 text-white rounded-lg text-[10px] font-bold uppercase tracking-wider">
                   {notice.courseName}
                 </span>
-                <span className="flex items-center gap-1 text-[11px] text-gray-400">
-                  <Calendar className="w-3 h-3" />
+                <span className="flex items-center gap-1.5 text-xs text-slate-400 font-medium">
+                  <Calendar className="w-3.5 h-3.5" />
                   {new Date(notice.createdAt).toLocaleDateString("en-US", {
                     month: "short",
                     day: "numeric",
@@ -186,7 +224,7 @@ export default function NoticesPage() {
                   })}
                 </span>
               </div>
-              <p className="text-sm text-gray-800 leading-relaxed mb-3">
+              <p className="text-slate-700 leading-relaxed group-hover:text-slate-900 transition-colors">
                 {notice.text}
               </p>
             </motion.div>

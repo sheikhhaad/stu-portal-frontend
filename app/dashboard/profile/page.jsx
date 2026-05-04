@@ -88,15 +88,19 @@ export default function ProfilePage() {
         formDataToSend.append("phone", profileForm.phone);
         formDataToSend.append("profilePic", selectedFile);
 
-        response = await api.put(`/auth/student/update/${student?._id}`, formDataToSend, {
-          withCredentials: true,
-        });
+        response = await api.put(
+          `/auth/student/update/${student?._id}`,
+          formDataToSend,
+          {
+            withCredentials: true,
+          },
+        );
       } else {
         // Send as JSON
         response = await api.put(
           `/auth/student/update/${student?._id}`,
           updateData,
-          { withCredentials: true }
+          { withCredentials: true },
         );
       }
 
@@ -129,7 +133,10 @@ export default function ProfilePage() {
       });
       // Rollback preview if upload failed
       if (selectedFile) {
-        setProfileForm((prev) => ({ ...prev, profilePic: formData.profilePic }));
+        setProfileForm((prev) => ({
+          ...prev,
+          profilePic: formData.profilePic,
+        }));
       }
       setTimeout(() => setUpdateStatus({ type: "", message: "" }), 3000);
     } finally {

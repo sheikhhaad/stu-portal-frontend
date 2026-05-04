@@ -18,6 +18,8 @@ import {
   ChevronDown,
   ChevronUp,
   RefreshCw,
+  Clock3,
+  CalendarCheck,
 } from "lucide-react";
 import { SlotCard } from "@/component/SlotCard";
 import { motion, AnimatePresence } from "framer-motion";
@@ -104,6 +106,7 @@ export default function TeacherDetail() {
   const router = useRouter();
   const { student } = useStudent();
 
+  const [teacher, setTeacher] = useState(null);
   const [slots, setSlots] = useState([]);
   const [sessions, setSessions] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -119,6 +122,16 @@ export default function TeacherDetail() {
       isMounted.current = false;
     };
   }, []);
+
+  const fetchTeacherInfo = useCallback(async () => {
+    if (!teacherId) return;
+    try {
+      const res = await api.get(`/enrollments/teacher/info/${teacherId}`);
+      if (isMounted.current) setTeacher(res.data?.teacher || res.data);
+    } catch (err) {
+      console.error("Failed to fetch teacher info:", err);
+    }
+  }, [teacherId]);
 
   const fetchSlots = useCallback(async () => {
     if (!teacherId) return;
@@ -153,16 +166,17 @@ export default function TeacherDetail() {
 
   const refreshData = useCallback(async () => {
     setRefreshing(true);
-    await Promise.all([fetchSlots(), fetchSessions()]);
+    await Promise.all([fetchTeacherInfo(), fetchSlots(), fetchSessions()]);
     setRefreshing(false);
-  }, [fetchSlots, fetchSessions]);
+  }, [fetchTeacherInfo, fetchSlots, fetchSessions]);
 
   useEffect(() => {
     if (teacherId) {
+      fetchTeacherInfo();
       fetchSlots();
       if (student?._id) fetchSessions();
     }
-  }, [teacherId, student?._id, fetchSlots, fetchSessions]);
+  }, [teacherId, student?._id, fetchTeacherInfo, fetchSlots, fetchSessions]);
 
   // Socket listeners
   useEffect(() => {
@@ -288,286 +302,228 @@ export default function TeacherDetail() {
 
   if (loading && slots.length === 0) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-10 h-10 border-2 border-slate-200 border-t-slate-800 rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-slate-400 text-sm font-medium">
-            Loading availability...
-          </p>
+      <div className="max-w-6xl mx-auto space-y-6 px-4 sm:px-6 py-8">
+        <div className="bg-white rounded-2xl h-40 animate-pulse border border-slate-100" />
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {[1, 2].map((i) => (
+            <div
+              key={i}
+              className="bg-slate-100 rounded-xl h-24 animate-pulse"
+            />
+          ))}
         </div>
       </div>
     );
   }
 
-  if (error) {
-    return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
-        <div className="bg-white rounded-2xl p-8 text-center max-w-sm shadow-sm">
-          <AlertCircle className="h-10 w-10 text-rose-300 mx-auto mb-3" />
-          <h3 className="text-sm font-bold text-slate-800 mb-1">
-            Something went wrong
-          </h3>
-          <p className="text-slate-400 text-sm mb-5">{error}</p>
-          <div className="flex gap-3 justify-center">
-            <button
-              onClick={refreshData}
-              className="px-4 py-2 bg-slate-800 text-white text-sm font-medium rounded-xl hover:bg-slate-700 transition"
-            >
-              <RefreshCw className="h-4 w-4 inline mr-1" /> Retry
-            </button>
-            <button
-              onClick={() => router.back()}
-              className="text-sm text-blue-600 hover:underline"
-            >
-              ← Back
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  const teacherName = teacher?.name || "Teacher";
+  const teacherInitial = teacherName.charAt(0).toUpperCase();
+
+  const stats = [
+    {
+      label: "Available Slots",
+      value: totalAvailable,
+      icon: Clock3,
+      color: "text-blue-600 bg-blue-50",
+    },
+    {
+      label: "Your Bookings",
+      value: sessions.length,
+      icon: CalendarCheck,
+      color: "text-emerald-600 bg-emerald-50",
+    },
+  ];
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 md:py-8">
-        {/* Header */}
-        <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+      className="max-w-6xl mx-auto space-y-7 px-4 sm:px-6 py-6 md:py-8"
+    >
+      {/* Header */}
+      <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div className="flex items-center gap-4">
           <Link
             href="/dashboard"
-            className="inline-flex items-center gap-1.5 text-sm text-slate-400 hover:text-slate-700 font-medium transition-colors group"
+            className="p-2 hover:bg-slate-50 rounded-lg text-slate-400 hover:text-slate-600 transition-colors"
           >
-            <ArrowLeft className="h-4 w-4 group-hover:-translate-x-0.5 transition-transform" />
-            Back to Dashboard
+            <ArrowLeft className="h-5 w-5" />
           </Link>
-          <button
-            onClick={refreshData}
-            disabled={refreshing}
-            className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition disabled:opacity-50"
-          >
-            <RefreshCw
-              className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`}
-            />
-          </button>
-        </div>
-
-        {/* Hero Card */}
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden mb-8">
-          <div className="p-6 md:p-8">
-            <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-6">
-              <div>
-                <div className="inline-flex items-center gap-2 px-3 py-1 bg-blue-50 text-blue-700 rounded-full text-xs font-medium mb-4">
-                  <Video className="h-3 w-3" />
-                  1:1 Sessions
-                </div>
-                <h1 className="text-2xl md:text-3xl font-bold text-slate-900 tracking-tight">
-                  Available Sessions
-                </h1>
-                <p className="text-slate-500 text-sm mt-2">
-                  Book a 15‑minute slot with your instructor
-                </p>
-              </div>
-              <div className="flex gap-3">
-                <div className="bg-slate-50 rounded-xl px-4 py-2 text-center min-w-[80px]">
-                  <p className="text-xl font-bold text-slate-800">
-                    {totalAvailable}
-                  </p>
-                  <p className="text-[10px] text-slate-400 uppercase font-semibold">
-                    Open
-                  </p>
-                </div>
-                <div className="bg-slate-50 rounded-xl px-4 py-2 text-center min-w-[80px]">
-                  <p className="text-xl font-bold text-slate-800">
-                    {totalBooked}
-                  </p>
-                  <p className="text-[10px] text-slate-400 uppercase font-semibold">
-                    Booked
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Session details row */}
-            <div className="flex flex-wrap gap-6 mt-6 pt-6 border-t border-slate-100">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 bg-slate-50 rounded-lg flex items-center justify-center">
-                  <User className="h-4 w-4 text-slate-400" />
-                </div>
-                <div>
-                  <p className="text-[10px] text-slate-400 uppercase font-semibold">
-                    Teacher
-                  </p>
-                  <p className="text-sm font-medium text-slate-700">
-                    ID: {teacherId?.slice(0, 8)}…
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 bg-slate-50 rounded-lg flex items-center justify-center">
-                  <Clock className="h-4 w-4 text-slate-400" />
-                </div>
-                <div>
-                  <p className="text-[10px] text-slate-400 uppercase font-semibold">
-                    Duration
-                  </p>
-                  <p className="text-sm font-medium text-slate-700">
-                    15 min per slot
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 bg-slate-50 rounded-lg flex items-center justify-center">
-                  <MapPin className="h-4 w-4 text-slate-400" />
-                </div>
-                <div>
-                  <p className="text-[10px] text-slate-400 uppercase font-semibold">
-                    Location
-                  </p>
-                  <p className="text-sm font-medium text-slate-700">
-                    Virtual (Video Call)
-                  </p>
-                </div>
-              </div>
-            </div>
+          <div className="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center text-blue-600 text-xl font-bold">
+            {teacherInitial}
+          </div>
+          <div>
+            <h1 className="text-xl font-bold text-slate-800">{teacherName}</h1>
+            <p className="text-slate-500 text-sm">
+              Book a 1:1 Session • Virtual Call
+            </p>
           </div>
         </div>
+        <button
+          onClick={refreshData}
+          disabled={refreshing}
+          className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition disabled:opacity-50"
+        >
+          <RefreshCw
+            className={`h-5 w-5 ${refreshing ? "animate-spin" : ""}`}
+          />
+        </button>
+      </div>
 
-        {/* Slots Panel */}
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-          <div className="px-6 py-4 border-b border-slate-100 flex items-center gap-2">
+      {/* Stats */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {stats.map((stat) => (
+          <div
+            key={stat.label}
+            className="bg-white rounded-xl p-5 border border-slate-100 flex justify-between"
+          >
+            <div>
+              <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">
+                {stat.label}
+              </p>
+              <p className="text-2xl font-bold mt-1">{stat.value}</p>
+            </div>
+            <div className={`${stat.color} p-2 rounded-lg h-fit`}>
+              <stat.icon className="w-5 h-5" />
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Slots Panel */}
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+        <div className="px-6 py-4 border-b border-slate-50 flex items-center justify-between">
+          <div className="flex items-center gap-2">
             <CalendarDays className="h-4 w-4 text-slate-400" />
-            <h2 className="text-sm font-semibold text-slate-800">
+            <h2 className="text-sm font-bold text-slate-800 uppercase tracking-wider">
               Available Time Slots
             </h2>
-            <span className="ml-auto px-2 py-0.5 bg-slate-100 text-slate-500 rounded-full text-xs font-medium">
-              {slots.length}
-            </span>
           </div>
+          <span className="px-2.5 py-1 bg-slate-50 text-slate-500 rounded-lg text-[10px] font-bold">
+            {slots.length} TOTAL SLOTS
+          </span>
+        </div>
 
-          <div className="p-5">
-            {slots.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-16 text-center">
-                <div className="w-14 h-14 bg-slate-50 rounded-full flex items-center justify-center mb-4">
-                  <CalendarDays className="h-6 w-6 text-slate-300" />
-                </div>
-                <h3 className="text-sm font-semibold text-slate-800 mb-1">
-                  No sessions available
-                </h3>
-                <p className="text-xs text-slate-400 max-w-xs">
-                  This teacher hasn't added any availability yet.
-                </p>
+        <div className="p-5">
+          {slots.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-16 text-center border-2 border-dashed border-slate-50 rounded-2xl">
+              <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mb-4">
+                <CalendarDays className="h-8 w-8 text-slate-200" />
               </div>
-            ) : (
-              <div className="space-y-3">
-                {sortedDates.map((dateKey, idx) => {
-                  const dateSlots = grouped[dateKey];
-                  const d = formatDate(dateKey);
-                  const availSlots = dateSlots.filter((s) => !s.is_booked);
-                  const bookedSlots = dateSlots.filter((s) => s.is_booked);
-                  const isCollapsed = collapsedDates[dateKey];
+              <h3 className="text-slate-800 font-bold mb-1">
+                No sessions available
+              </h3>
+              <p className="text-xs text-slate-400 max-w-xs">
+                This teacher hasn't added any availability yet.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {sortedDates.map((dateKey, idx) => {
+                const dateSlots = grouped[dateKey];
+                const d = formatDate(dateKey);
+                const availSlots = dateSlots.filter((s) => !s.is_booked);
+                const bookedSlots = dateSlots.filter((s) => s.is_booked);
+                const isCollapsed = collapsedDates[dateKey];
 
-                  return (
-                    <motion.div
-                      key={dateKey}
-                      initial={{ opacity: 0, y: 6 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: idx * 0.05 }}
-                      className="border border-slate-100 rounded-xl overflow-hidden"
+                return (
+                  <motion.div
+                    key={dateKey}
+                    initial={{ opacity: 0, y: 6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: idx * 0.05 }}
+                    className="border border-slate-50 rounded-2xl overflow-hidden shadow-sm"
+                  >
+                    <button
+                      onClick={() => toggleDateCollapse(dateKey)}
+                      className="w-full px-6 py-4 bg-white flex items-center justify-between hover:bg-slate-50/50 transition-colors"
                     >
-                      <button
-                        onClick={() => toggleDateCollapse(dateKey)}
-                        className="w-full px-5 py-3 bg-white flex items-center justify-between hover:bg-slate-50 transition-colors"
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 bg-slate-50 rounded-lg flex items-center justify-center">
-                            <Calendar className="h-4 w-4 text-slate-400" />
-                          </div>
-                          <div className="text-left">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <span className="font-semibold text-slate-800 text-sm">
-                                {d.full}
-                              </span>
-                              {d.isToday && (
-                                <span className="text-[10px] font-medium bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full">
-                                  Today
-                                </span>
-                              )}
-                              {d.isTomorrow && (
-                                <span className="text-[10px] font-medium bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full">
-                                  Tomorrow
-                                </span>
-                              )}
-                            </div>
-                            <p className="text-xs text-slate-400 mt-0.5">
-                              {availSlots.length} open · {bookedSlots.length}{" "}
-                              booked
-                            </p>
-                          </div>
+                      <div className="flex items-center gap-4">
+                        <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center">
+                          <Calendar className="h-5 w-5 text-blue-600" />
                         </div>
-                        <div className="flex items-center gap-2">
-                          {availSlots.length > 0 && (
-                            <span className="hidden sm:inline-block text-[10px] font-medium bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full">
-                              {availSlots.length} available
+                        <div className="text-left">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-bold text-slate-800">
+                              {d.full}
                             </span>
-                          )}
+                            {d.isToday && (
+                              <span className="text-[9px] font-black uppercase bg-emerald-50 text-emerald-600 px-2 py-0.5 rounded-md tracking-wider">
+                                Today
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-xs text-slate-400 font-medium mt-0.5">
+                            {availSlots.length} open · {bookedSlots.length}{" "}
+                            booked
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        {availSlots.length > 0 && (
+                          <span className="hidden sm:inline-block text-[10px] font-bold bg-blue-600 text-white px-2.5 py-1 rounded-lg uppercase tracking-wider">
+                            {availSlots.length} Free
+                          </span>
+                        )}
+                        <div className="p-1.5 bg-slate-50 rounded-lg text-slate-400">
                           {isCollapsed ? (
-                            <ChevronDown className="h-4 w-4 text-slate-300" />
+                            <ChevronDown className="h-4 w-4" />
                           ) : (
-                            <ChevronUp className="h-4 w-4 text-slate-300" />
+                            <ChevronUp className="h-4 w-4" />
                           )}
                         </div>
-                      </button>
+                      </div>
+                    </button>
 
-                      <AnimatePresence>
-                        {!isCollapsed && (
-                          <motion.div
-                            initial={{ height: 0, opacity: 0 }}
-                            animate={{ height: "auto", opacity: 1 }}
-                            exit={{ height: 0, opacity: 0 }}
-                            transition={{ duration: 0.2 }}
-                            className="overflow-hidden"
-                          >
-                            <div className="border-t border-slate-100 bg-slate-50/30 p-4">
-                              <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-none snap-x snap-mandatory">
-                                {dateSlots.map((slot) => (
-                                  <div
-                                    key={slot._id}
-                                    className="flex-shrink-0 w-72 snap-start"
-                                  >
-                                    <SlotCard
-                                      slot={slot}
-                                      timeBlocks={generateTimeBlocks(slot)}
-                                      slotSessions={getSessionsForSlot(
-                                        slot._id,
-                                      )}
-                                      duration={getDuration(
-                                        slot.start_time,
-                                        slot.end_time,
-                                      )}
-                                      bookingId={bookingId}
-                                      onBook={(blockStartTime) =>
-                                        bookSlot(slot._id, slot, blockStartTime)
-                                      }
-                                    />
-                                  </div>
-                                ))}
+                    <AnimatePresence>
+                      {!isCollapsed && (
+                        <motion.div
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: "auto", opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          className="bg-slate-50/30 border-t border-slate-50"
+                        >
+                          <div className="p-6 overflow-x-auto scrollbar-none flex gap-4 snap-x snap-mandatory">
+                            {dateSlots.map((slot) => (
+                              <div
+                                key={slot._id}
+                                className="flex-shrink-0 w-72 snap-start"
+                              >
+                                <SlotCard
+                                  slot={slot}
+                                  timeBlocks={generateTimeBlocks(slot)}
+                                  slotSessions={getSessionsForSlot(slot._id)}
+                                  duration={getDuration(
+                                    slot.start_time,
+                                    slot.end_time,
+                                  )}
+                                  bookingId={bookingId}
+                                  onBook={(blockStartTime) =>
+                                    bookSlot(slot._id, slot, blockStartTime)
+                                  }
+                                />
                               </div>
-                              {dateSlots.length > 3 && (
-                                <p className="text-[10px] text-slate-300 font-medium text-right mt-2 pr-1">
-                                  Scroll for more →
-                                </p>
-                              )}
+                            ))}
+                          </div>
+                          {dateSlots.length > 2 && (
+                            <div className="px-6 pb-3 flex justify-end">
+                              <p className="text-[9px] font-bold text-slate-300 uppercase tracking-widest flex items-center gap-1">
+                                Scroll for more{" "}
+                                <ChevronRight className="h-3 w-3" />
+                              </p>
                             </div>
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
-                    </motion.div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
+                          )}
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </motion.div>
+                );
+              })}
+            </div>
+          )}
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 }
